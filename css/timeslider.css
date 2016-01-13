@@ -1,0 +1,140 @@
+.time-slider {
+    height: 150px;
+    position: relative;
+    overflow: hidden;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    z-index: 1;
+}
+
+.time-slider .bg {
+    top: 50px;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background-color: #afd9ee;
+    position: absolute;
+    z-index: 2;
+}
+
+.time-slider .bg-event {
+    top: 50px;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    cursor: move;
+    background-color: transparent;
+    position: absolute;
+    z-index: 8;
+}
+
+.time-slider .time-caret {
+    top: 50px;
+    width: 2px;
+    height: 50px;
+    background-color: #ff0000;
+    position: absolute;
+    z-index: 7;
+}
+
+.time-slider .each-hour-caret {
+    top: 88px;
+    width: 1px;
+    height: 12px;
+    background-color: #555555;
+    position: absolute;
+    z-index: 6;
+}
+
+.time-slider .datetime-caret {
+    top: 102px;
+    width: 80px;
+    cursor: default;
+    text-align: center;
+    position: absolute;
+    z-index: 6;
+}
+
+.time-slider .each-hour-caret.middle {
+    top: 75px;
+    width: 1px;
+    height: 25px;
+}
+
+.time-slider .each-hour-caret.big {
+    top: 50px;
+    width: 2px;
+    height: 50px;
+}
+
+.time-slider .timeline {
+    top: 57px;
+    height: 36px;
+    padding: 1px;
+    position: absolute;
+    text-align: center;
+    overflow: hidden;
+    background-color: #ffab7d;
+    z-index: 3;
+}
+
+.time-slider .timeline.current {
+    background-color: #ff6d29;
+}
+
+.time-slider .timeline-event {
+    top: 57px;
+    height: 36px;
+    background-color: transparent;
+    position: absolute;
+    cursor: move;
+    z-index: 9;
+}
+
+.time-slider .left-border-event {
+    top: 57px;
+    width: 3px;
+    height: 36px;
+    position: absolute;
+    background-color: transparent;
+    cursor: w-resize;
+    z-index: 10;
+}
+
+.time-slider .right-border-event {
+    top: 57px;
+    width: 3px;
+    height: 36px;
+    position: absolute;
+    background-color: transparent;
+    cursor: e-resize;
+    z-index: 10;
+}
+
+.time-slider .timeline-event:hover,
+.time-slider .timeline-event.hover{
+    border: 1px dashed #204d74;
+}
+
+.time-slider .timeline-event.moving {
+    border-color: #ff0716;
+}
+
+.time-slider .timeline-event.current {
+    border-right: none;
+    cursor: default;
+}
+
+.time-slider .timeline .tooltip {
+    width: 75px;
+}
+
+.time-slider .dtooltip {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+}
