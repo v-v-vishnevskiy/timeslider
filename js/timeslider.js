@@ -40,6 +40,8 @@ if (typeof jQuery === 'undefined') {
     TimeSlider.VERSION = '0.5.0';
 
     TimeSlider.DEFAULTS = {
+        start_timestamp: (new Date()).getTime(),
+        current_timestamp: (new Date()).getTime(),
         hours_per_frame: 24,
         update_timestamp_interval: 1000,
         update_interval: 1000,
@@ -56,8 +58,12 @@ if (typeof jQuery === 'undefined') {
         this.$element = $(element);
         this.options = this.getOptions(options);
 
-        this.start_timestamp = parseInt(this.$element.attr('start_timestamp'));
-        this.frozen_current_timestamp = this.current_timestamp = parseInt(this.$element.attr('current_timestamp'));
+        if (this.$element.attr('start_timestamp')) {
+            this.start_timestamp = parseInt(this.$element.attr('start_timestamp'));
+        }
+        if (this.$element.attr('current_timestamp')) {
+            this.frozen_current_timestamp = this.current_timestamp = parseInt(this.$element.attr('current_timestamp'));
+        }
         this.px_per_ms = this.$element.width() / (this.options['hours_per_frame'] * 3600 * 1000);
 
         // append background color
@@ -125,6 +131,14 @@ if (typeof jQuery === 'undefined') {
 
         if (options['update_interval'] < options['update_timestamp_interval']) {
             options['update_interval'] = options['update_timestamp_interval'];
+        }
+
+        if (options['start_timestamp'] && options['start_timestamp'] >= 0) {
+            this.start_timestamp = options['start_timestamp'];
+        }
+
+        if (options['current_timestamp'] && options['current_timestamp'] >= 0) {
+            this.frozen_current_timestamp = this.current_timestamp = options['current_timestamp'];
         }
 
         return options;
@@ -253,12 +267,12 @@ if (typeof jQuery === 'undefined') {
         $.each(cells, function(index, cell) {
             if (! _this.$element.find('#' + cell['_id']).length) {
                 t_class = '';
-                start = 'start_timestamp="' + (cell['start'] * 1000).toString() + '"';
+                start = 'start_timestamp="' + (cell['start']).toString() + '"';
                 stop = '';
-                width = ((cell['stop'] ? (cell['stop'] * 1000) : _this.current_timestamp) - (cell['start'] * 1000)) * _this.px_per_ms;
-                left = (((cell['start'] * 1000) - _this.start_timestamp) * _this.px_per_ms);
+                width = ((cell['stop'] ? (cell['stop']) : _this.current_timestamp) - (cell['start'])) * _this.px_per_ms;
+                left = (((cell['start']) - _this.start_timestamp) * _this.px_per_ms);
                 if (cell['stop']) {
-                    stop = 'stop_timestamp="' + (cell['stop'] * 1000).toString() + '"';
+                    stop = 'stop_timestamp="' + (cell['stop']).toString() + '"';
                 }
                 else {
                     t_class = ' current';
@@ -268,14 +282,14 @@ if (typeof jQuery === 'undefined') {
                 _this.$element.append(
                     '<div id="'+ cell['_id'] +'" class="timeline' + t_class + '" ' + start + ' ' + stop + ' style="' + style + '">' +
                         _this.time_duration(
-                            (cell['stop'] ? (cell['stop'] * 1000) : _this.current_timestamp) - (cell['start'] * 1000)
+                            (cell['stop'] ? (cell['stop']) : _this.current_timestamp) - (cell['start'])
                         ) +
                     '</div>' +
                     '<div id="l' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="left-border-event" style="left:' + left.toString() + 'px;">' +
-                        '<div class="dtooltip" data-toggle="tooltip" data-placement="top" title="' + _this.date_to_str(new Date(cell['start'] * 1000)) + '"></div>' +
+                        '<div class="dtooltip" data-toggle="tooltip" data-placement="top" title="' + _this.date_to_str(new Date(cell['start'])) + '"></div>' +
                     '</div>' +
                     '<div id="t' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="timeline-event' + t_class + '" style="' + style + '"></div>' +
-                    (cell['stop'] ? '<div id="r' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="right-border-event" style="left:' + (left + width - 3) + 'px;"><div class="dtooltip" data-toggle="tooltip" data-placement="bottom" title="' + _this.date_to_str(new Date(cell['stop'] * 1000)) + '"></div></div>' : '')
+                    (cell['stop'] ? '<div id="r' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="right-border-event" style="left:' + (left + width - 3) + 'px;"><div class="dtooltip" data-toggle="tooltip" data-placement="bottom" title="' + _this.date_to_str(new Date(cell['stop'])) + '"></div></div>' : '')
                 );
 
                 // add events
