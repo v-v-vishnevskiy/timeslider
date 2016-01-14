@@ -171,8 +171,8 @@ if (typeof jQuery === 'undefined') {
     TimeSlider.prototype.add_events = function() {
         window.setInterval(this.set_current_timestamp(), this.options['update_timestamp_interval']);
         window.setInterval(this.set_running_elements(), this.options['update_interval']);
-        this.$element.mousemove(this.cursor_moving_event());
-        this.$element.mouseup(this.mouse_up_event());
+        $('body').mouseup(this.mouse_up_event());
+        $('body').mousemove(this.cursor_moving_event());
         this.$element.find('.bg-event').mousedown(this.timeslider_mouse_down_event());
     };
 
@@ -223,7 +223,8 @@ if (typeof jQuery === 'undefined') {
                     element: _this.$element.find('#' + $(this).attr('p_id')),
                     l_point: _this.$element.find('#l' + $(this).attr('p_id')),
                     t_element: $(this),
-                    r_point: _this.$element.find('#r' + $(this).attr('p_id'))
+                    r_point: _this.$element.find('#r' + $(this).attr('p_id')),
+                    hover: true
                 };
                 $(this).addClass('moving');
                 _this.prev_cursor_x = _this.get_cursor_x_position(e);
@@ -237,7 +238,8 @@ if (typeof jQuery === 'undefined') {
                     element: _this.$element.find('#' + $(this).attr('p_id')),
                     l_point: $(this),
                     t_element: _this.$element.find('#t' + $(this).attr('p_id')),
-                    r_point: _this.$element.find('#r' + $(this).attr('p_id'))
+                    r_point: _this.$element.find('#r' + $(this).attr('p_id')),
+                    hover: true
                 };
                 _this.left_point_selected.t_element.addClass('moving');
                 _this.prev_cursor_x = _this.get_cursor_x_position(e);
@@ -251,7 +253,8 @@ if (typeof jQuery === 'undefined') {
                     element: _this.$element.find('#' + $(this).attr('p_id')),
                     l_point: _this.$element.find('#l' + $(this).attr('p_id')),
                     t_element: _this.$element.find('#t' + $(this).attr('p_id')),
-                    r_point: $(this)
+                    r_point: $(this),
+                    hover: true
                 };
                 _this.right_point_selected.t_element.addClass('moving');
                 _this.prev_cursor_x = _this.get_cursor_x_position(e);
@@ -286,34 +289,87 @@ if (typeof jQuery === 'undefined') {
                         ) +
                     '</div>' +
                     '<div id="l' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="left-border-event" style="left:' + left.toString() + 'px;">' +
-                        '<div class="dtooltip" data-toggle="tooltip" data-placement="top" title="' + _this.date_to_str(new Date(cell['start'])) + '"></div>' +
+                        '<div class="prompt" style="top:-50px;left: -44px;">' +
+                            '<div class="triangle-down"></div>' +
+                            '<div class="body">' + _this.date_to_str(new Date(cell['start'])) + '</div>' +
+                        '</div>' +
                     '</div>' +
                     '<div id="t' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="timeline-event' + t_class + '" style="' + style + '"></div>' +
-                    (cell['stop'] ? '<div id="r' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="right-border-event" style="left:' + (left + width - 3) + 'px;"><div class="dtooltip" data-toggle="tooltip" data-placement="bottom" title="' + _this.date_to_str(new Date(cell['stop'])) + '"></div></div>' : '')
+                    (cell['stop'] ?
+                        '<div id="r' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="right-border-event" style="left:' + (left + width - 3) + 'px;">' +
+                            '<div class="prompt" style="top:50px;left: -41px;">' +
+                                '<div class="triangle-up"></div>' +
+                                '<div class="body">' + _this.date_to_str(new Date(cell['stop'])) + '</div>' +
+                            '</div>' +
+                        '</div>'
+                        : '')
                 );
 
                 // add events
-                _this.$element.find('[data-toggle="tooltip"]').tooltip();
                 _this.$element.find('#l' + cell['_id']).mousedown(left_point_mouse_down_event)
-                    .mouseover(function() {_this.$element.find('#t' + $(this).attr('p_id')).addClass('hover');})
-                    .mouseout(function() {_this.$element.find('#t' + $(this).attr('p_id')).removeClass('hover');});
+                    .mouseover(function() {
+                        if (! _this.is_mouse_down_left) {
+                            var id = $(this).attr('p_id');
+                            _this.$element.find('#t' + id).addClass('hover');
+                            _this.$element.find('#l' + id + ' .prompt').fadeIn(150);
+                        }
+                        else {
+                            (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = true;
+                        }
+                    })
+                    .mouseout(function() {
+                        if (! _this.is_mouse_down_left) {
+                            var id = $(this).attr('p_id');
+                            _this.$element.find('#t' + id).removeClass('hover');
+                            _this.$element.find('#l' + id + ' .prompt').fadeOut(150);
+                        }
+                        else {
+                            (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = false;
+                        }
+                    });
                 if (cell['stop']) {
                     _this.$element.find('#t' + cell['_id']).mousedown(time_cell_mouse_down_event)
                         .mouseover(function() {
-                            var id = $(this).attr('p_id');
-                            _this.$element.find('#l' + id + ' .dtooltip').tooltip('show');
-                            _this.$element.find('#r' + id + ' .dtooltip').tooltip('show');
+                            if (! _this.is_mouse_down_left) {
+                                var id = $(this).attr('p_id');
+                                _this.$element.find('#l' + id + ' .prompt').fadeIn(150);
+                                _this.$element.find('#r' + id + ' .prompt').fadeIn(150);
+                            }
+                            else {
+                                (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = true;
+                            }
                         })
                         .mouseout(function() {
                             if (! _this.is_mouse_down_left) {
                                 var id = $(this).attr('p_id');
-                                _this.$element.find('#l' + id + ' .dtooltip').tooltip('hide');
-                                _this.$element.find('#r' + id + ' .dtooltip').tooltip('hide');
+                                _this.$element.find('#l' + id + ' .prompt').fadeOut(150);
+                                _this.$element.find('#r' + id + ' .prompt').fadeOut(150);
+                            }
+                            else {
+                                (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = false;
                             }
                         });
                     _this.$element.find('#r' + cell['_id']).mousedown(right_point_mouse_down_event)
-                        .mouseover(function() {_this.$element.find('#t' + $(this).attr('p_id')).addClass('hover');})
-                        .mouseout(function() {_this.$element.find('#t' + $(this).attr('p_id')).removeClass('hover');});
+                        .mouseover(function() {
+                            if (! _this.is_mouse_down_left) {
+                                var id = $(this).attr('p_id');
+                                _this.$element.find('#t' + id).addClass('hover');
+                                _this.$element.find('#r' + id + ' .prompt').fadeIn(150);
+                            }
+                            else {
+                                (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = true;
+                            }
+                        })
+                        .mouseout(function() {
+                            if (! _this.is_mouse_down_left) {
+                                var id = $(this).attr('p_id');
+                                _this.$element.find('#t' + id).removeClass('hover');
+                                _this.$element.find('#r' + id + ' .prompt').fadeOut(150);
+                            }
+                            else {
+                                (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = false;
+                            }
+                        });
                 }
                 else {
                     _this.running_time_cell = _this.$element.find('#' + cell['_id']);
@@ -334,15 +390,11 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.set_tooltips = function(element) {
-        var left_border = this.$element.find('#l' + element.attr('id') + ' .dtooltip');
-        var right_border = this.$element.find('#r' + element.attr('id') + ' .dtooltip');
-        var start_tooltip = this.date_to_str(new Date(parseInt(element.attr('start_timestamp'))));
-        left_border.tooltip().attr('data-original-title', start_tooltip);
-        left_border.tooltip().data('bs.tooltip').$tip.find('.tooltip-inner').text(start_tooltip);
+        var left_border = this.$element.find('#l' + element.attr('id') + ' .prompt .body');
+        var right_border = this.$element.find('#r' + element.attr('id') + ' .prompt .body');
+        left_border.text(this.date_to_str(new Date(parseInt(element.attr('start_timestamp')))));
         if (right_border.length) {
-            var stop_tooltip = this.date_to_str(new Date(parseInt(element.attr('stop_timestamp'))));
-            right_border.tooltip().data('bs.tooltip').$tip.find('.tooltip-inner').text(stop_tooltip);
-            right_border.tooltip().attr('data-original-title', stop_tooltip);
+            right_border.text(this.date_to_str(new Date(parseInt(element.attr('stop_timestamp')))));
         }
     };
 
@@ -532,6 +584,10 @@ if (typeof jQuery === 'undefined') {
             if (e.which == 1) { // left mouse button event
                 _this.is_mouse_down_left = false;
                 if (_this.time_cell_selected) {
+                    if (! _this.time_cell_selected.hover) {
+                        _this.time_cell_selected.l_point.find('.prompt').fadeOut(150);
+                        _this.time_cell_selected.r_point.find('.prompt').fadeOut(150);
+                    }
                     if (typeof _this.options.on_change_time_cell_callback === 'function') {
                         _this.options.on_change_time_cell_callback(
                             _this.time_cell_selected.element.attr('id'),
@@ -543,6 +599,14 @@ if (typeof jQuery === 'undefined') {
                     _this.time_cell_selected = null;
                 }
                 else if (_this.left_point_selected || _this.right_point_selected) {
+                    if (! (_this.left_point_selected || _this.right_point_selected).hover) {
+                        if (_this.left_point_selected) {
+                            _this.left_point_selected.l_point.find('.prompt').fadeOut(150);
+                        }
+                        else if (_this.right_point_selected) {
+                            _this.right_point_selected.r_point.find('.prompt').fadeOut(150);
+                        }
+                    }
                     var t_element = (_this.left_point_selected || _this.right_point_selected).t_element;
                     if (typeof _this.options.on_change_time_cell_callback === 'function') {
                         var element = (_this.left_point_selected || _this.right_point_selected).element;
