@@ -209,55 +209,118 @@ if (typeof jQuery === 'undefined') {
         }
     };
 
-    TimeSlider.prototype.test = function() {
-        console.log('test');
-    };
-
     TimeSlider.prototype.add_cells = function(cells) {
         var _this = this;
 
-        var time_cell_mouse_down_event = function(e) {
+        var get_selected_area = function(e) {
+            var width = parseFloat($(this).css('width'));
+            var pos_x = parseFloat(e.offsetX);
+            if (pos_x <= 3) {
+                return 'left';
+            }
+            else if (pos_x > 3 && pos_x < (width - 4)) {
+                return 'center';
+            }
+            else {
+                return 'right';
+            }
+        };
+
+        var time_cell_mousedown_event = function(e) {
             if (e.which == 1) { // left mouse button event
-                _this.is_mouse_down_left = true;
-                _this.time_cell_selected = {
-                    element: _this.$element.find('#' + $(this).attr('p_id')),
-                    l_point: _this.$element.find('#l' + $(this).attr('p_id')),
-                    t_element: $(this),
-                    r_point: _this.$element.find('#r' + $(this).attr('p_id')),
-                    hover: true
-                };
-                $(this).addClass('moving');
+                var id = $(this).attr('p_id');
+                switch(get_selected_area.call(this, e)) {
+                    case 'left':
+                        _this.time_cell_selected = {
+                            element: _this.$element.find('#' + id),
+                            l_prompt: _this.$element.find('#l-prompt-' + id + '.prompt'),
+                            t_element: $(this),
+                            hover: true
+                        };
+                        _this.is_mouse_down_left = true;
+                        $(this).addClass('moving');
+                        break;
+                    case 'center':
+                        if (! $(this).hasClass('current')) {
+                            _this.time_cell_selected = {
+                                element: _this.$element.find('#' + id),
+                                l_prompt: _this.$element.find('#l-prompt-' + id + '.prompt'),
+                                t_element: $(this),
+                                r_prompt: _this.$element.find('#r-prompt-' + id + '.prompt'),
+                                hover: true
+                            };
+                            _this.is_mouse_down_left = true;
+                            $(this).addClass('moving');
+                        }
+                        break;
+                    case 'right':
+                        if (! $(this).hasClass('current')) {
+                            _this.time_cell_selected = {
+                                element: _this.$element.find('#' + id),
+                                t_element: $(this),
+                                r_prompt: _this.$element.find('#r-prompt-' + id + '.prompt'),
+                                hover: true
+                            };
+                            _this.is_mouse_down_left = true;
+                            $(this).addClass('moving');
+                        }
+                        break;
+                }
                 _this.prev_cursor_x = _this.get_cursor_x_position(e);
             }
         };
 
-        var left_point_mouse_down_event = function(e) {
-            if (e.which == 1) { // left mouse button event
-                _this.is_mouse_down_left = true;
-                _this.left_point_selected = {
-                    element: _this.$element.find('#' + $(this).attr('p_id')),
-                    l_point: $(this),
-                    t_element: _this.$element.find('#t' + $(this).attr('p_id')),
-                    r_point: _this.$element.find('#r' + $(this).attr('p_id')),
-                    hover: true
-                };
-                _this.left_point_selected.t_element.addClass('moving');
-                _this.prev_cursor_x = _this.get_cursor_x_position(e);
+        var time_cell_mousemove_event = function(e) {
+            if (! _this.is_mouse_down_left) {
+                var id = $(this).attr('p_id');
+                switch(get_selected_area.call(this, e)) {
+                    case 'left':
+                        _this.$element.find('#l-prompt-' + id + '.prompt').fadeIn(150);
+                        _this.$element.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                        $(this).css('cursor', 'w-resize');
+                        break;
+                    case 'center':
+                        if ($(this).hasClass('current')) {
+                            $(this).css('cursor', 'default');
+                            _this.$element.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$element.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                        }
+                        else {
+                            _this.$element.find('#l-prompt-' + id + '.prompt').fadeIn(150);
+                            _this.$element.find('#r-prompt-' + id + '.prompt').fadeIn(150);
+                            $(this).css('cursor', 'move');
+                        }
+                        break;
+                    case 'right':
+                        if ($(this).hasClass('current')) {
+                            $(this).css('cursor', 'default');
+                            _this.$element.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$element.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                        }
+                        else {
+                            _this.$element.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$element.find('#r-prompt-' + id + '.prompt').fadeIn(150);
+                            $(this).css('cursor', 'e-resize');
+                        }
+                        break;
+                }
             }
+            else {
+                _this.time_cell_selected.hover = true;
+            }
+            $(this).addClass('hover');
         };
 
-        var right_point_mouse_down_event = function(e) {
-            if (e.which == 1) { // left mouse button event
-                _this.is_mouse_down_left = true;
-                _this.right_point_selected = {
-                    element: _this.$element.find('#' + $(this).attr('p_id')),
-                    l_point: _this.$element.find('#l' + $(this).attr('p_id')),
-                    t_element: _this.$element.find('#t' + $(this).attr('p_id')),
-                    r_point: $(this),
-                    hover: true
-                };
-                _this.right_point_selected.t_element.addClass('moving');
-                _this.prev_cursor_x = _this.get_cursor_x_position(e);
+        var time_cell_mouseout_event = function(e) {
+            if (! _this.is_mouse_down_left) {
+                var id = $(this).attr('p_id');
+                _this.$element.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                _this.$element.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                $(this).css('cursor', 'move');
+                $(this).removeClass('hover');
+            }
+            else {
+                _this.time_cell_selected.hover = false;
             }
         };
 
@@ -288,92 +351,33 @@ if (typeof jQuery === 'undefined') {
                             (cell['stop'] ? (cell['stop']) : _this.current_timestamp) - (cell['start'])
                         ) +
                     '</div>' +
-                    '<div id="l' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="left-border-event" style="left:' + left.toString() + 'px;">' +
-                        '<div class="prompt" style="top:-50px;left: -44px;">' +
-                            '<div class="triangle-down"></div>' +
-                            '<div class="body">' + _this.date_to_str(new Date(cell['start'])) + '</div>' +
-                        '</div>' +
-                    '</div>' +
                     '<div id="t' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="timeline-event' + t_class + '" style="' + style + '"></div>' +
+                    '<div id="l-prompt-' + cell['_id'] + '" class="prompt" style="top:9px;left:' + (left - 44).toString() + 'px;">' +
+                        '<div class="triangle-down"></div>' +
+                        '<div class="body">' + _this.date_to_str(new Date(cell['start'])) + '</div>' +
+                    '</div>' +
                     (cell['stop'] ?
-                        '<div id="r' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="right-border-event" style="left:' + (left + width - 3) + 'px;">' +
-                            '<div class="prompt" style="top:50px;left: -41px;">' +
-                                '<div class="triangle-up"></div>' +
-                                '<div class="body">' + _this.date_to_str(new Date(cell['stop'])) + '</div>' +
-                            '</div>' +
+                        '<div id="r-prompt-' + cell['_id'] + '" class="prompt" style="top:101px;left: ' + (left + width - 44).toString() + 'px;">' +
+                            '<div class="triangle-up"></div>' +
+                            '<div class="body">' + _this.date_to_str(new Date(cell['stop'])) + '</div>' +
                         '</div>'
                         : '')
                 );
 
+                if (! cell['stop']) {
+                    if (_this.running_time_cell) {
+                        throw new Error('Can\'t run several time cells');
+                    }
+                    else {
+                        _this.running_time_cell = _this.$element.find('#' + cell['_id']);
+                    }
+                }
+
                 // add events
-                _this.$element.find('#l' + cell['_id']).mousedown(left_point_mouse_down_event)
-                    .mouseover(function() {
-                        if (! _this.is_mouse_down_left) {
-                            var id = $(this).attr('p_id');
-                            _this.$element.find('#t' + id).addClass('hover');
-                            _this.$element.find('#l' + id + ' .prompt').fadeIn(150);
-                        }
-                        else {
-                            (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = true;
-                        }
-                    })
-                    .mouseout(function() {
-                        if (! _this.is_mouse_down_left) {
-                            var id = $(this).attr('p_id');
-                            _this.$element.find('#t' + id).removeClass('hover');
-                            _this.$element.find('#l' + id + ' .prompt').fadeOut(150);
-                        }
-                        else {
-                            (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = false;
-                        }
-                    });
-                if (cell['stop']) {
-                    _this.$element.find('#t' + cell['_id']).mousedown(time_cell_mouse_down_event)
-                        .mouseover(function() {
-                            if (! _this.is_mouse_down_left) {
-                                var id = $(this).attr('p_id');
-                                _this.$element.find('#l' + id + ' .prompt').fadeIn(150);
-                                _this.$element.find('#r' + id + ' .prompt').fadeIn(150);
-                            }
-                            else {
-                                (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = true;
-                            }
-                        })
-                        .mouseout(function() {
-                            if (! _this.is_mouse_down_left) {
-                                var id = $(this).attr('p_id');
-                                _this.$element.find('#l' + id + ' .prompt').fadeOut(150);
-                                _this.$element.find('#r' + id + ' .prompt').fadeOut(150);
-                            }
-                            else {
-                                (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = false;
-                            }
-                        });
-                    _this.$element.find('#r' + cell['_id']).mousedown(right_point_mouse_down_event)
-                        .mouseover(function() {
-                            if (! _this.is_mouse_down_left) {
-                                var id = $(this).attr('p_id');
-                                _this.$element.find('#t' + id).addClass('hover');
-                                _this.$element.find('#r' + id + ' .prompt').fadeIn(150);
-                            }
-                            else {
-                                (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = true;
-                            }
-                        })
-                        .mouseout(function() {
-                            if (! _this.is_mouse_down_left) {
-                                var id = $(this).attr('p_id');
-                                _this.$element.find('#t' + id).removeClass('hover');
-                                _this.$element.find('#r' + id + ' .prompt').fadeOut(150);
-                            }
-                            else {
-                                (_this.time_cell_selected || _this.left_point_selected || _this.right_point_selected).hover = false;
-                            }
-                        });
-                }
-                else {
-                    _this.running_time_cell = _this.$element.find('#' + cell['_id']);
-                }
+                _this.$element.find('#t' + cell['_id'])
+                    .mousedown(time_cell_mousedown_event)
+                    .mousemove(time_cell_mousemove_event)
+                    .mouseout(time_cell_mouseout_event);
             }
         });
     };
@@ -390,11 +394,15 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.set_tooltips = function(element) {
-        var left_border = this.$element.find('#l' + element.attr('id') + ' .prompt .body');
-        var right_border = this.$element.find('#r' + element.attr('id') + ' .prompt .body');
-        left_border.text(this.date_to_str(new Date(parseInt(element.attr('start_timestamp')))));
-        if (right_border.length) {
-            right_border.text(this.date_to_str(new Date(parseInt(element.attr('stop_timestamp')))));
+        if(element.l_prompt) {
+            element.l_prompt.find('.body').text(
+                this.date_to_str(new Date(parseInt(element.element.attr('start_timestamp'))))
+            );
+        }
+        if(element.r_prompt) {
+            element.r_prompt.find('.body').text(
+                this.date_to_str(new Date(parseInt(element.element.attr('stop_timestamp'))))
+            );
         }
     };
 
@@ -404,7 +412,7 @@ if (typeof jQuery === 'undefined') {
             // TODO: fix this
             _this.current_timestamp = _this.frozen_current_timestamp + (new Date() - _this.init_timestamp);
             if (_this.current_timestamp - _this.start_timestamp >= (3600 * 1000 * _this.options['hours_per_frame'])) {
-                // TODO: update time slider to next day by ajax
+                // TODO: update time slider to next day if timeslider was not moved
             }
         }
     };
@@ -475,9 +483,15 @@ if (typeof jQuery === 'undefined') {
             var start_timestamp = parseInt(elem.attr('start_timestamp'));
             var left = (start_timestamp - _this.start_timestamp) * _this.px_per_ms;
             elem.css('left', left);
-            _this.$element.find('#l' + elem.attr('id')).css('left', left);
+            _this.$element.find('#l-prompt-' + elem.attr('id') + '.prompt').css(
+                'left',
+                parseFloat(_this.$element.find('#l-prompt-' + elem.attr('id') + '.prompt').css('left')) + diff_x
+            );
             _this.$element.find('#t' + elem.attr('id')).css('left', left);
-            _this.$element.find('#r' + elem.attr('id')).css('left', left + parseInt(elem.css('width')) - 3);
+            _this.$element.find('#r-prompt-' + elem.attr('id') + '.prompt').css(
+                'left',
+                parseFloat(_this.$element.find('#r-prompt-' + elem.attr('id') + '.prompt').css('left')) + diff_x
+            );
         });
         if ( typeof this.options.on_move_timeslider_callback === 'function') {
             this.options.on_move_timeslider_callback(this.start_timestamp);
@@ -486,60 +500,60 @@ if (typeof jQuery === 'undefined') {
 
     TimeSlider.prototype.set_time_cell_position = function(e, diff_x) {
         var id = this.time_cell_selected.element.attr('id');
-        var new_start = parseInt(this.time_cell_selected.element.attr('start_timestamp')) + Math.round(diff_x / this.px_per_ms);
-        var new_stop = parseInt(this.time_cell_selected.element.attr('stop_timestamp')) + Math.round(diff_x / this.px_per_ms);
-        this.time_cell_selected.element.attr('start_timestamp', new_start);
-        this.time_cell_selected.element.attr('stop_timestamp', new_stop);
-        this.time_cell_selected.element.css('left', parseInt(this.time_cell_selected.element.css('left')) + diff_x);
-        this.time_cell_selected.l_point.css('left', parseInt(this.time_cell_selected.l_point.css('left')) + diff_x);
-        this.time_cell_selected.t_element.css('left', parseInt(this.time_cell_selected.t_element.css('left')) + diff_x);
-        this.time_cell_selected.r_point.css('left', parseInt(this.time_cell_selected.r_point.css('left')) + diff_x);
-        this.set_tooltips(this.time_cell_selected.element);
-        if (typeof this.options.on_move_time_cell_callback === 'function') {
-            this.options.on_move_time_cell_callback(id, new_start, new_stop);
-        }
-    };
 
-    TimeSlider.prototype.set_point_position = function(e, diff_x) {
-        var attr;
-        var element;
-        var width;
-        var left;
-        var point;
-        if (this.left_point_selected) {
-            point = 'left';
-            element = this.left_point_selected.element;
-            attr = 'start_timestamp';
-            left = parseInt(this.left_point_selected.element.css('left')) + diff_x;
-            width = parseInt(this.left_point_selected.element.css('width')) + diff_x * (-1);
-            this.left_point_selected.element.css('left', left);
-            this.left_point_selected.element.css('width', width);
-            this.left_point_selected.l_point.css('left', left);
-            this.left_point_selected.t_element.css('width', width);
-            this.left_point_selected.t_element.css('left', left);
+        // move all time cell
+        if (this.time_cell_selected.l_prompt && this.time_cell_selected.r_prompt) {
+            var new_start = parseInt(this.time_cell_selected.element.attr('start_timestamp')) + Math.round(diff_x / this.px_per_ms);
+            var new_stop = parseInt(this.time_cell_selected.element.attr('stop_timestamp')) + Math.round(diff_x / this.px_per_ms);
+            this.time_cell_selected.element.attr('start_timestamp', new_start);
+            this.time_cell_selected.element.attr('stop_timestamp', new_stop);
+            this.time_cell_selected.element.css('left', parseFloat(this.time_cell_selected.element.css('left')) + diff_x);
+            this.time_cell_selected.l_prompt.css('left', parseFloat(this.time_cell_selected.l_prompt.css('left')) + diff_x);
+            this.time_cell_selected.t_element.css('left', parseFloat(this.time_cell_selected.t_element.css('left')) + diff_x);
+            this.time_cell_selected.r_prompt.css('left', parseFloat(this.time_cell_selected.r_prompt.css('left')) + diff_x);
+            this.set_tooltips(this.time_cell_selected);
+            if (typeof this.options.on_move_time_cell_callback === 'function') {
+                this.options.on_move_time_cell_callback(id, new_start, new_stop);
+            }
         }
-        else {
-            point = 'right';
-            element = this.right_point_selected.element;
-            attr = 'stop_timestamp';
-            width = parseInt(this.right_point_selected.element.css('width')) + diff_x ;
-            this.right_point_selected.element.css('width', width);
-            this.right_point_selected.t_element.css('width', width);
-            this.right_point_selected.r_point.css('left', parseInt(this.right_point_selected.r_point.css('left')) + diff_x);
+        // resize left border
+        else if (this.time_cell_selected.l_prompt) {
+            var new_start = parseInt(this.time_cell_selected.element.attr('start_timestamp')) + Math.round(diff_x / this.px_per_ms);
+            var width = parseFloat(this.time_cell_selected.element.css('width')) + diff_x * (-1);
+            this.time_cell_selected.element.attr('start_timestamp', new_start);
+            this.time_cell_selected.element.css('left', parseFloat(this.time_cell_selected.element.css('left')) + diff_x);
+            this.time_cell_selected.element.css('width', width);
+            this.time_cell_selected.l_prompt.css('left', parseFloat(this.time_cell_selected.l_prompt.css('left')) + diff_x);
+            this.time_cell_selected.t_element.css('left', parseFloat(this.time_cell_selected.t_element.css('left')) + diff_x);
+            this.time_cell_selected.t_element.css('width', width);
+            this.set_time_duration(this.time_cell_selected.element);
+            this.set_tooltips(this.time_cell_selected);
+            if (typeof this.options.on_resize_time_cell_callback === 'function') {
+                this.options.on_resize_time_cell_callback(
+                    id,
+                    parseInt(this.time_cell_selected.element.attr('start_timestamp')),
+                    parseInt(this.time_cell_selected.element.attr('stop_timestamp')),
+                    'left'
+                );
+            }
         }
-        element.attr(
-            attr,
-            parseInt(element.attr(attr)) + Math.round(diff_x / this.px_per_ms)
-        );
-        this.set_time_duration(element);
-        this.set_tooltips(element);
-        if (typeof this.options.on_resize_time_cell_callback === 'function') {
-            this.options.on_resize_time_cell_callback(
-                element.attr('id'),
-                parseInt(element.attr('start_timestamp')),
-                parseInt(element.attr('stop_timestamp')),
-                point
-            );
+        // resize right border
+        else if (this.time_cell_selected.r_prompt) {
+            var new_stop = parseInt(this.time_cell_selected.element.attr('stop_timestamp')) + Math.round(diff_x / this.px_per_ms);
+            this.time_cell_selected.element.attr('stop_timestamp', new_stop);
+            this.time_cell_selected.element.css('width', parseFloat(this.time_cell_selected.element.css('width')) + diff_x);
+            this.time_cell_selected.t_element.css('width', parseFloat(this.time_cell_selected.t_element.css('width')) + diff_x);
+            this.time_cell_selected.r_prompt.css('left', parseFloat(this.time_cell_selected.r_prompt.css('left')) + diff_x);
+            this.set_time_duration(this.time_cell_selected.element);
+            this.set_tooltips(this.time_cell_selected);
+            if (typeof this.options.on_resize_time_cell_callback === 'function') {
+                this.options.on_resize_time_cell_callback(
+                    id,
+                    parseInt(this.time_cell_selected.element.attr('start_timestamp')),
+                    parseInt(this.time_cell_selected.element.attr('stop_timestamp')),
+                    'right'
+                );
+            }
         }
     };
 
@@ -567,9 +581,6 @@ if (typeof jQuery === 'undefined') {
                 if (_this.time_cell_selected) {
                     _this.set_time_cell_position(e, pos_x - _this.prev_cursor_x);
                 }
-                else if (_this.left_point_selected || _this.right_point_selected) {
-                    _this.set_point_position(e, pos_x - _this.prev_cursor_x);
-                }
                 else {
                     _this.set_timeslider_position(e, pos_x - _this.prev_cursor_x);
                 }
@@ -585,8 +596,9 @@ if (typeof jQuery === 'undefined') {
                 _this.is_mouse_down_left = false;
                 if (_this.time_cell_selected) {
                     if (! _this.time_cell_selected.hover) {
-                        _this.time_cell_selected.l_point.find('.prompt').fadeOut(150);
-                        _this.time_cell_selected.r_point.find('.prompt').fadeOut(150);
+                        _this.$element.find('#l-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
+                        _this.$element.find('#r-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
+                        _this.time_cell_selected.t_element.removeClass('hover');
                     }
                     if (typeof _this.options.on_change_time_cell_callback === 'function') {
                         _this.options.on_change_time_cell_callback(
@@ -597,28 +609,6 @@ if (typeof jQuery === 'undefined') {
                     }
                     _this.time_cell_selected.t_element.removeClass('moving');
                     _this.time_cell_selected = null;
-                }
-                else if (_this.left_point_selected || _this.right_point_selected) {
-                    if (! (_this.left_point_selected || _this.right_point_selected).hover) {
-                        if (_this.left_point_selected) {
-                            _this.left_point_selected.l_point.find('.prompt').fadeOut(150);
-                        }
-                        else if (_this.right_point_selected) {
-                            _this.right_point_selected.r_point.find('.prompt').fadeOut(150);
-                        }
-                    }
-                    var t_element = (_this.left_point_selected || _this.right_point_selected).t_element;
-                    if (typeof _this.options.on_change_time_cell_callback === 'function') {
-                        var element = (_this.left_point_selected || _this.right_point_selected).element;
-                        _this.options.on_change_time_cell_callback(
-                            element.attr('id'),
-                            parseInt(element.attr('start_timestamp')),
-                            parseInt(element.attr('stop_timestamp'))
-                        );
-                    }
-                    t_element.removeClass('moving');
-                    _this.left_point_selected = null;
-                    _this.right_point_selected = null;
                 }
                 else {
                     if ( typeof _this.options.on_change_timeslider_callback === 'function') {

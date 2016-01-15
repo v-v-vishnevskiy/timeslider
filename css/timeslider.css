@@ -95,27 +95,6 @@
     z-index: 9;
 }
 
-.time-slider .left-border-event {
-    top: 57px;
-    width: 3px;
-    height: 36px;
-    position: absolute;
-    background-color: transparent;
-    cursor: w-resize;
-    z-index: 10;
-}
-
-.time-slider .right-border-event {
-    top: 57px;
-    width: 3px;
-    height: 36px;
-    position: absolute;
-    background-color: transparent;
-    cursor: e-resize;
-    z-index: 10;
-}
-
-.time-slider .timeline-event:hover,
 .time-slider .timeline-event.hover{
     border: 1px dashed #204d74;
 }
