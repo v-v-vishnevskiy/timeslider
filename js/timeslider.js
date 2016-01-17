@@ -29,10 +29,9 @@ if (typeof jQuery === 'undefined') {
         this.is_mouse_down_left = false;
         this.prev_cursor_x = 0;
         this.time_cell_selected = null;
-        this.left_point_selected = null;
-        this.right_point_selected = null;
         this.running_time_cell = null;
         this.time_caret = null;
+        this.steps_by_minutes = [1, 2, 5, 10, 15, 20, 30, 60, 120, 180, 240, 360, 720, 1440];
 
         this.init(element, options);
     };
@@ -40,9 +39,11 @@ if (typeof jQuery === 'undefined') {
     TimeSlider.VERSION = '0.5.0';
 
     TimeSlider.DEFAULTS = {
-        start_timestamp: (new Date()).getTime(),
-        current_timestamp: (new Date()).getTime(),
-        hours_per_frame: 24,
+        start_timestamp: (new Date()).getTime(),   // left border
+        current_timestamp: (new Date()).getTime(), // current timestamp
+        hours_per_frame: 24,                       // length of graduation ruler in hours (zoom)
+        graduation_step: 20,                       // minimum pixel between graduations
+        distance_between_gtitle: 80,               // minimum pixel between titles of graduations
         update_timestamp_interval: 1000,
         update_interval: 1000,
         show_ms: false,
@@ -141,6 +142,13 @@ if (typeof jQuery === 'undefined') {
             this.frozen_current_timestamp = this.current_timestamp = options['current_timestamp'];
         }
 
+        if (options['graduation_step'] > this.$element.width()) {
+            options['graduation_step'] = this.$element.width();
+        }
+        else if (options['graduation_step'] < 5) {
+            options['graduation_step'] = 5;
+        }
+
         return options;
     };
 
@@ -155,17 +163,17 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.graduation_title = function(datetime) {
-        if (datetime.getUTCHours() == 0) {
+        if (datetime.getUTCHours() == 0 && datetime.getUTCMinutes() == 0 && datetime.getUTCMilliseconds() == 0) {
             return ('0' + datetime.getUTCDate().toString()).substr(-2) + '.' +
                 ('0' + (datetime.getUTCMonth() + 1).toString()).substr(-2) + '.' +
                 datetime.getUTCFullYear();
         }
-        return datetime.getUTCHours() + ':00';
-    }
+        return datetime.getUTCHours() + ':' + ('0' + datetime.getUTCMinutes().toString()).substr(-2);
+    };
 
-    TimeSlider.prototype.ms_to_next_hour = function(date) {
-        var spent_ms = (date.getUTCMinutes() * 60 * 1000) + (date.getUTCSeconds() * 1000) + date.getUTCMilliseconds();
-        return spent_ms ? (3600 * 1000) - spent_ms : 0;
+    TimeSlider.prototype.ms_to_next_step = function(timestamp, step) {
+        var remainder = timestamp % step;
+        return remainder ? step - remainder : 0;
     };
 
     TimeSlider.prototype.add_events = function() {
@@ -177,35 +185,54 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.add_time_caret = function() {
-        this.$element.append('<div class="time-caret"></div>');
-        this.time_caret = this.$element.find('.time-caret');
+        this.$element.append('<div class="current-time-caret"></div>');
+        this.time_caret = this.$element.find('.current-time-caret');
         this.set_time_caret_position();
     };
 
     TimeSlider.prototype.add_graduations = function() {
-        var ms_offset = this.ms_to_next_hour(new Date(this.start_timestamp));
-        var hour_caret = this.start_timestamp + ms_offset - 3600 * 1000 * 4;
-        var hour_step_px = this.$element.width() / this.options['hours_per_frame'];
-        var date_hour_caret;
+        var px_per_minute = this.$element.width() / (this.options.hours_per_frame * 60);
+        var px_per_step = this.options.graduation_step;
+        var min_step = px_per_step / px_per_minute;
+        for (var i = 0; i < this.steps_by_minutes.length; i++) {
+            if (min_step <= this.steps_by_minutes[i]) {
+                min_step = this.steps_by_minutes[i];
+                px_per_step = min_step * px_per_minute;
+                break;
+            }
+        }
+
+        var medium_step = 30;
+        for (var i = 0; i < this.steps_by_minutes.length; i++) {
+            if (this.options.distance_between_gtitle / px_per_minute <= this.steps_by_minutes[i]) {
+                medium_step = this.steps_by_minutes[i];
+                break;
+            }
+        }
+
+        var ms_offset = this.ms_to_next_step(this.start_timestamp, min_step * 60 * 1000);
+        var minute_caret = this.start_timestamp + ms_offset - (min_step * 60 * 1000) * 4;
+        var num_steps = this.$element.width() / px_per_step;
+        var date;
         var caret_class;
         var left;
-        for (var i = -4; i <= this.options['hours_per_frame']; i++) {
+        for (var i = -4; i <= num_steps; i++) {
             caret_class = '';
-            date_hour_caret = new Date(hour_caret);
-            if (date_hour_caret.getUTCHours() % 3 == 0) {
-                caret_class = 'middle';
-            }
-            if (date_hour_caret.getUTCHours() == 0) {
+            date = new Date(minute_caret);
+            left = i * px_per_step + this.px_per_ms * ms_offset;
+            if (date.getUTCHours() == 0 && date.getUTCMinutes() == 0) {
                 caret_class = 'big';
             }
-            left = i * hour_step_px + this.px_per_ms * ms_offset;
-            this.$element.append('<div id="hour' + i + '" class="each-hour-caret ' + caret_class + '" style="left: ' + left.toString() + 'px"></div>');
+            else if (minute_caret / (60 * 1000) % medium_step == 0) {
+                caret_class = 'middle';
+            }
+            this.$element.append('<div id="hour' + i + '" class="graduation ' + caret_class + '" style="left: ' + left.toString() + 'px"></div>');
             this.$element.append(
-                '<div id="datetime-hour' + i + '" class="datetime-caret' + (caret_class ? '' : ' hidden') + '" style="left:' + (left - 40).toString() + 'px">' +
-                    this.graduation_title(date_hour_caret) +
+                '<div id="graduation-title-hour' + i + '" class="graduation-title' + (caret_class ? '' : ' hidden') + '" style="left:' + (left - 40).toString() + 'px">' +
+                    this.graduation_title(date) +
                 '</div>'
             );
-            hour_caret += 3600 * 1000;
+            minute_caret += min_step * 60 * 1000;
         }
     };
 
@@ -273,6 +300,7 @@ if (typeof jQuery === 'undefined') {
         var time_cell_mousemove_event = function(e) {
             if (! _this.is_mouse_down_left) {
                 var id = $(this).attr('p_id');
+                $(this).addClass('hover');
                 switch(get_selected_area.call(this, e)) {
                     case 'left':
                         _this.$element.find('#l-prompt-' + id + '.prompt').fadeIn(150);
@@ -306,9 +334,10 @@ if (typeof jQuery === 'undefined') {
                 }
             }
             else {
-                _this.time_cell_selected.hover = true;
+                if (_this.time_cell_selected) {
+                    _this.time_cell_selected.hover = true;
+                }
             }
-            $(this).addClass('hover');
         };
 
         var time_cell_mouseout_event = function(e) {
@@ -320,7 +349,9 @@ if (typeof jQuery === 'undefined') {
                 $(this).removeClass('hover');
             }
             else {
-                _this.time_cell_selected.hover = false;
+                if (_this.time_cell_selected) {
+                    _this.time_cell_selected.hover = true;
+                }
             }
         };
 
@@ -346,12 +377,12 @@ if (typeof jQuery === 'undefined') {
                 style = 'left:' + left.toString() + 'px;';
                 style += 'width:' + width.toString() + 'px;';
                 _this.$element.append(
-                    '<div id="'+ cell['_id'] +'" class="timeline' + t_class + '" ' + start + ' ' + stop + ' style="' + style + '">' +
+                    '<div id="'+ cell['_id'] +'" class="timecell' + t_class + '" ' + start + ' ' + stop + ' style="' + style + '">' +
                         _this.time_duration(
                             (cell['stop'] ? (cell['stop']) : _this.current_timestamp) - (cell['start'])
                         ) +
                     '</div>' +
-                    '<div id="t' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="timeline-event' + t_class + '" style="' + style + '"></div>' +
+                    '<div id="t' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="timecell-event' + t_class + '" style="' + style + '"></div>' +
                     '<div id="l-prompt-' + cell['_id'] + '" class="prompt" style="top:9px;left:' + (left - 44).toString() + 'px;">' +
                         '<div class="triangle-down"></div>' +
                         '<div class="body">' + _this.date_to_str(new Date(cell['start'])) + '</div>' +
@@ -425,7 +456,7 @@ if (typeof jQuery === 'undefined') {
                 _this.set_time_duration(_this.running_time_cell);
                 var width = (_this.current_timestamp - parseInt(_this.running_time_cell.attr('start_timestamp'))) *
                     _this.px_per_ms;
-                _this.running_time_cell.css('width', width + 2);
+                _this.running_time_cell.css('width', width);
                 _this.$element.find('#t' + _this.running_time_cell.attr('id')).css('width', width);
             }
         }
@@ -441,56 +472,72 @@ if (typeof jQuery === 'undefined') {
 
         this.set_time_caret_position();
 
-        // update graduations
-        var ms_offset = this.ms_to_next_hour(new Date(this.start_timestamp));
-        var hour_caret = this.start_timestamp + ms_offset - 3600 * 1000 * 4;
-        var hour_step_px = this.$element.width() / this.options['hours_per_frame'];
-        var date_hour_caret;
+        var px_per_minute = this.$element.width() / (this.options.hours_per_frame * 60);
+        var px_per_step = this.options.graduation_step;
+        var min_step = px_per_step / px_per_minute;
+        for (var i = 0; i < this.steps_by_minutes.length; i++) {
+            if (min_step <= this.steps_by_minutes[i]) {
+                min_step = this.steps_by_minutes[i];
+                px_per_step = min_step * px_per_minute;
+                break;
+            }
+        }
+
+        var medium_step = 30;
+        for (var i = 0; i < this.steps_by_minutes.length; i++) {
+            if (this.options.distance_between_gtitle / px_per_minute <= this.steps_by_minutes[i]) {
+                medium_step = this.steps_by_minutes[i];
+                break;
+            }
+        }
+
+        var ms_offset = this.ms_to_next_step(this.start_timestamp, min_step * 60 * 1000);
+        var minute_caret = this.start_timestamp + ms_offset - (min_step * 60 * 1000) * 4;
+        var date;
         var caret_class;
-        var i = -4;
         var left;
         var datetime_caret;
-        this.$element.children('.each-hour-caret').each(function () {
-            var elem = $(this);
+        var i = -4;
+        this.$element.children('.graduation').each(function () {
             caret_class = '';
-            date_hour_caret = new Date(hour_caret);
-            if (date_hour_caret.getUTCHours() % 3 == 0) {
-                caret_class = 'middle';
-            }
-            if (date_hour_caret.getUTCHours() == 0) {
+            date = new Date(minute_caret);
+            left = i * px_per_step + _this.px_per_ms * ms_offset;
+            if (date.getUTCHours() == 0 && date.getUTCMinutes() == 0) {
                 caret_class = 'big';
             }
-            hour_caret += (3600 * 1000);
-            elem.removeClass('middle big');
-            if (caret_class) {
-                elem.addClass(caret_class);
+            else if (minute_caret / (60 * 1000) % medium_step == 0) {
+                caret_class = 'middle';
             }
-            left = i * hour_step_px + _this.px_per_ms * ms_offset;
-            elem.css('left', left);
-            datetime_caret = _this.$element.find('#datetime-' + elem.attr('id')).css('left', left - 40).html(_this.graduation_title(date_hour_caret));
+            $(this).removeClass('middle big');
+            if (caret_class) {
+                $(this).addClass(caret_class);
+            }
+            $(this).css('left', left);
+            datetime_caret = _this.$element.find('#graduation-title-' + $(this).attr('id')).css('left', left - 40).html(_this.graduation_title(date));
             if (caret_class) {
                 datetime_caret.removeClass('hidden');
             }
             else {
                 datetime_caret.addClass('hidden');
             }
+            minute_caret += min_step * 60 * 1000;
             i++;
         });
 
-        // update position and width of timelines
-        this.$element.children('.timeline').each(function () {
-            var elem = $(this);
-            var start_timestamp = parseInt(elem.attr('start_timestamp'));
+
+        // update position and width of timecells
+        this.$element.children('.timecell').each(function () {
+            var start_timestamp = parseInt($(this).attr('start_timestamp'));
             var left = (start_timestamp - _this.start_timestamp) * _this.px_per_ms;
-            elem.css('left', left);
-            _this.$element.find('#l-prompt-' + elem.attr('id') + '.prompt').css(
+            $(this).css('left', left);
+            _this.$element.find('#l-prompt-' + $(this).attr('id') + '.prompt').css(
                 'left',
-                parseFloat(_this.$element.find('#l-prompt-' + elem.attr('id') + '.prompt').css('left')) + diff_x
+                parseFloat(_this.$element.find('#l-prompt-' + $(this).attr('id') + '.prompt').css('left')) + diff_x
             );
-            _this.$element.find('#t' + elem.attr('id')).css('left', left);
-            _this.$element.find('#r-prompt-' + elem.attr('id') + '.prompt').css(
+            _this.$element.find('#t' + $(this).attr('id')).css('left', left);
+            _this.$element.find('#r-prompt-' + $(this).attr('id') + '.prompt').css(
                 'left',
-                parseFloat(_this.$element.find('#r-prompt-' + elem.attr('id') + '.prompt').css('left')) + diff_x
+                parseFloat(_this.$element.find('#r-prompt-' + $(this).attr('id') + '.prompt').css('left')) + diff_x
             );
         });
         if ( typeof this.options.on_move_timeslider_callback === 'function') {

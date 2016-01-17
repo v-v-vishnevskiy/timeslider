@@ -16,7 +16,8 @@
     left: 0;
     width: 100%;
     height: 50px;
-    background-color: #afd9ee;
+    background-color: #fff;
+    border: 1px #cccccc solid;
     position: absolute;
     z-index: 2;
 }
@@ -29,82 +30,101 @@
     cursor: move;
     background-color: transparent;
     position: absolute;
-    z-index: 8;
+    z-index: 6;
 }
 
-.time-slider .time-caret {
+.time-slider .current-time-caret {
     top: 50px;
     width: 2px;
     height: 50px;
     background-color: #ff0000;
     position: absolute;
-    z-index: 7;
+    z-index: 5;
 }
 
-.time-slider .each-hour-caret {
+/*----------------------*/
+
+.time-slider .graduation {
     top: 88px;
     width: 1px;
     height: 12px;
-    background-color: #555555;
+    background-color: #cccccc;
     position: absolute;
-    z-index: 6;
+    z-index: 3;
 }
 
-.time-slider .datetime-caret {
+.time-slider .graduation-title {
     top: 102px;
     width: 80px;
     cursor: default;
+    color: #555555;
     text-align: center;
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
     position: absolute;
-    z-index: 6;
+    z-index: 3;
 }
 
-.time-slider .each-hour-caret.middle {
+.time-slider .graduation.middle {
     top: 75px;
     width: 1px;
     height: 25px;
 }
 
-.time-slider .each-hour-caret.big {
+.time-slider .graduation.big {
     top: 50px;
     width: 2px;
     height: 50px;
 }
 
-.time-slider .timeline {
+/*----------------------*/
+
+.time-slider .timecell {
     top: 57px;
     height: 36px;
     padding: 1px;
     position: absolute;
     text-align: center;
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
     overflow: hidden;
     background-color: #ffab7d;
-    z-index: 3;
+    opacity: 0.9;
+    filter: alpha(Opacity=90);
+    z-index: 4;
+    border-radius: 4px;
 }
 
-.time-slider .timeline.current {
+.time-slider .timecell.current {
     background-color: #ff6d29;
+    border-radius: 4px 0 0 4px;
 }
 
-.time-slider .timeline-event {
+.time-slider .timecell-event {
     top: 57px;
     height: 36px;
     background-color: transparent;
     position: absolute;
     cursor: move;
-    z-index: 9;
+    z-index: 7;
+    border-radius: 4px;
 }
 
-.time-slider .timeline-event.hover{
+.time-slider .timecell-event.hover{
     border: 1px dashed #204d74;
 }
 
-.time-slider .timeline-event.moving {
+.time-slider .timecell-event.moving {
     border-color: #ff0716;
 }
 
-.time-slider .timeline-event.current {
+.time-slider .timecell-event.current {
     border-right: none;
+    border-radius: 4px 0 0 4px;
     cursor: default;
 }
 
