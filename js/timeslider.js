@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.5.0
+ * Timeslider v0.6.0
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -22,9 +22,7 @@ if (typeof jQuery === 'undefined') {
         this.$element = null;
         this.options = null;
         this.init_timestamp = new Date();
-        this.start_timestamp = 0;
         this.frozen_current_timestamp = 0;
-        this.current_timestamp = 0;
         this.px_per_ms = 1;
         this.is_mouse_down_left = false;
         this.prev_cursor_x = 0;
@@ -34,9 +32,10 @@ if (typeof jQuery === 'undefined') {
         this.steps_by_minutes = [1, 2, 5, 10, 15, 20, 30, 60, 120, 180, 240, 360, 720, 1440];
 
         this.init(element, options);
+        return this;
     };
 
-    TimeSlider.VERSION = '0.5.0';
+    TimeSlider.VERSION = '0.6.0';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime(),   // left border
@@ -57,15 +56,15 @@ if (typeof jQuery === 'undefined') {
 
     TimeSlider.prototype.init = function(element, options) {
         this.$element = $(element);
-        this.options = this.getOptions(options);
-
         if (this.$element.attr('start_timestamp')) {
-            this.start_timestamp = parseInt(this.$element.attr('start_timestamp'));
+            options['start_timestamp'] = parseInt(this.$element.attr('start_timestamp'));
         }
         if (this.$element.attr('current_timestamp')) {
-            this.frozen_current_timestamp = this.current_timestamp = parseInt(this.$element.attr('current_timestamp'));
+            this.frozen_current_timestamp = options['current_timestamp'] = parseInt(this.$element.attr('current_timestamp'));
         }
-        this.px_per_ms = this.$element.width() / (this.options['hours_per_frame'] * 3600 * 1000);
+        this.options = this.get_options(options);
+
+        this.px_per_ms = this.$element.width() / (this.options.hours_per_frame * 3600 * 1000);
 
         // append background color
         this.$element.append('<div class="bg"></div><div class="bg-event"></div>');
@@ -83,7 +82,7 @@ if (typeof jQuery === 'undefined') {
         this.add_events();
     };
 
-    TimeSlider.prototype.getDefaults = function() {
+    TimeSlider.prototype.get_defaults = function() {
         return TimeSlider.DEFAULTS;
     };
 
@@ -115,10 +114,12 @@ if (typeof jQuery === 'undefined') {
         return s.toString() + _ms;
     };
 
-    TimeSlider.prototype.getOptions = function (options) {
-        options = $.extend({}, this.getDefaults(), this.$element.data(), options);
+    TimeSlider.prototype.get_options = function (options) {
+        options = $.extend({}, this.get_defaults(), options);
+        return this.validate_options(options);
+    };
 
-        // validations
+    TimeSlider.prototype.validate_options = function (options) {
         if (options['hours_per_frame'] < 1) {
             options['hours_per_frame'] = 1;
         }
@@ -135,11 +136,11 @@ if (typeof jQuery === 'undefined') {
         }
 
         if (options['start_timestamp'] && options['start_timestamp'] >= 0) {
-            this.start_timestamp = options['start_timestamp'];
+            options['start_timestamp'] = options['start_timestamp'];
         }
 
         if (options['current_timestamp'] && options['current_timestamp'] >= 0) {
-            this.frozen_current_timestamp = this.current_timestamp = options['current_timestamp'];
+            this.frozen_current_timestamp = options['current_timestamp'] = options['current_timestamp'];
         }
 
         if (options['graduation_step'] > this.$element.width()) {
@@ -148,8 +149,23 @@ if (typeof jQuery === 'undefined') {
         else if (options['graduation_step'] < 5) {
             options['graduation_step'] = 5;
         }
-
         return options;
+    };
+
+    TimeSlider.prototype.set_options = function (options) {
+        if (options.hours_per_frame) {
+            options = $.extend({}, this.options, options);
+
+            // zoom
+            if (options.hours_per_frame != this.options.hours_per_frame) {
+                this.options.hours_per_frame = options.hours_per_frame;
+                this.px_per_ms = this.$element.width() / (this.options.hours_per_frame * 3600 * 1000);
+                this.remove_graduations();
+                this.add_graduations();
+                this.set_time_caret_position();
+                this.set_time_cells_position();
+            }
+        }
     };
 
     TimeSlider.prototype.date_to_str = function(datetime) {
@@ -210,8 +226,8 @@ if (typeof jQuery === 'undefined') {
             }
         }
 
-        var ms_offset = this.ms_to_next_step(this.start_timestamp, min_step * 60 * 1000);
-        var minute_caret = this.start_timestamp + ms_offset - (min_step * 60 * 1000) * 4;
+        var ms_offset = this.ms_to_next_step(this.options.start_timestamp, min_step * 60 * 1000);
+        var minute_caret = this.options.start_timestamp + ms_offset - (min_step * 60 * 1000) * 4;
         var num_steps = this.$element.width() / px_per_step;
         var date;
         var caret_class;
@@ -234,6 +250,11 @@ if (typeof jQuery === 'undefined') {
             );
             minute_caret += min_step * 60 * 1000;
         }
+    };
+
+    TimeSlider.prototype.remove_graduations = function() {
+        this.$element.find('.graduation').remove();
+        this.$element.find('.graduation-title').remove();
     };
 
     TimeSlider.prototype.add_cells = function(cells) {
@@ -366,8 +387,8 @@ if (typeof jQuery === 'undefined') {
                 t_class = '';
                 start = 'start_timestamp="' + (cell['start']).toString() + '"';
                 stop = '';
-                width = ((cell['stop'] ? (cell['stop']) : _this.current_timestamp) - (cell['start'])) * _this.px_per_ms;
-                left = (((cell['start']) - _this.start_timestamp) * _this.px_per_ms);
+                width = ((cell['stop'] ? (cell['stop']) : _this.options.current_timestamp) - (cell['start'])) * _this.px_per_ms;
+                left = (((cell['start']) - _this.options.start_timestamp) * _this.px_per_ms);
                 if (cell['stop']) {
                     stop = 'stop_timestamp="' + (cell['stop']).toString() + '"';
                 }
@@ -379,7 +400,7 @@ if (typeof jQuery === 'undefined') {
                 _this.$element.append(
                     '<div id="'+ cell['_id'] +'" class="timecell' + t_class + '" ' + start + ' ' + stop + ' style="' + style + '">' +
                         _this.time_duration(
-                            (cell['stop'] ? (cell['stop']) : _this.current_timestamp) - (cell['start'])
+                            (cell['stop'] ? (cell['stop']) : _this.options.current_timestamp) - (cell['start'])
                         ) +
                     '</div>' +
                     '<div id="t' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="timecell-event' + t_class + '" style="' + style + '"></div>' +
@@ -419,7 +440,7 @@ if (typeof jQuery === 'undefined') {
             this.time_duration(
                 (element.attr('stop_timestamp') ?
                     parseInt(element.attr('stop_timestamp')) :
-                    this.current_timestamp) - parseInt(element.attr('start_timestamp'))
+                    this.options.current_timestamp) - parseInt(element.attr('start_timestamp'))
             )
         );
     };
@@ -441,8 +462,8 @@ if (typeof jQuery === 'undefined') {
         var _this = this;
         return function() {
             // TODO: fix this
-            _this.current_timestamp = _this.frozen_current_timestamp + (new Date() - _this.init_timestamp);
-            if (_this.current_timestamp - _this.start_timestamp >= (3600 * 1000 * _this.options['hours_per_frame'])) {
+            _this.options.current_timestamp = _this.frozen_current_timestamp + (new Date() - _this.init_timestamp);
+            if (_this.options.current_timestamp - _this.options.start_timestamp >= (3600 * 1000 * _this.options.hours_per_frame)) {
                 // TODO: update time slider to next day if timeslider was not moved
             }
         }
@@ -454,7 +475,7 @@ if (typeof jQuery === 'undefined') {
             _this.set_time_caret_position();
             if (_this.running_time_cell) {
                 _this.set_time_duration(_this.running_time_cell);
-                var width = (_this.current_timestamp - parseInt(_this.running_time_cell.attr('start_timestamp'))) *
+                var width = (_this.options.current_timestamp - parseInt(_this.running_time_cell.attr('start_timestamp'))) *
                     _this.px_per_ms;
                 _this.running_time_cell.css('width', width);
                 _this.$element.find('#t' + _this.running_time_cell.attr('id')).css('width', width);
@@ -463,12 +484,34 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.set_time_caret_position = function() {
-        this.time_caret.css('left', (this.current_timestamp - this.start_timestamp) * this.px_per_ms);
+        this.time_caret.css('left', (this.options.current_timestamp - this.options.start_timestamp) * this.px_per_ms);
+    };
+
+    TimeSlider.prototype.set_time_cells_position = function() {
+        var _this = this;
+        this.$element.children('.timecell').each(function () {
+            var start_timestamp = parseInt($(this).attr('start_timestamp'));
+            var left = (start_timestamp - _this.options.start_timestamp) * _this.px_per_ms;
+            var width = (($(this).attr('stop_timestamp')
+                ? parseInt($(this).attr('stop_timestamp'))
+                : _this.options.current_timestamp) - start_timestamp) * _this.px_per_ms;
+            $(this).css('left', left);
+            $(this).css('width', width);
+            _this.$element.find('#l-prompt-' + $(this).attr('id') + '.prompt').css(
+                'left',
+                left - 44
+            );
+            _this.$element.find('#t' + $(this).attr('id')).css('left', left).css('width', width);
+            _this.$element.find('#r-prompt-' + $(this).attr('id') + '.prompt').css(
+                'left',
+                left + width - 44
+            );
+        });
     };
 
     TimeSlider.prototype.set_timeslider_position = function(e, diff_x) {
         var _this = this;
-        this.start_timestamp = this.start_timestamp - Math.round(diff_x / this.px_per_ms);
+        this.options.start_timestamp = this.options.start_timestamp - Math.round(diff_x / this.px_per_ms);
 
         this.set_time_caret_position();
 
@@ -491,8 +534,8 @@ if (typeof jQuery === 'undefined') {
             }
         }
 
-        var ms_offset = this.ms_to_next_step(this.start_timestamp, min_step * 60 * 1000);
-        var minute_caret = this.start_timestamp + ms_offset - (min_step * 60 * 1000) * 4;
+        var ms_offset = this.ms_to_next_step(this.options.start_timestamp, min_step * 60 * 1000);
+        var minute_caret = this.options.start_timestamp + ms_offset - (min_step * 60 * 1000) * 4;
         var date;
         var caret_class;
         var left;
@@ -523,25 +566,9 @@ if (typeof jQuery === 'undefined') {
             minute_caret += min_step * 60 * 1000;
             i++;
         });
-
-
-        // update position and width of timecells
-        this.$element.children('.timecell').each(function () {
-            var start_timestamp = parseInt($(this).attr('start_timestamp'));
-            var left = (start_timestamp - _this.start_timestamp) * _this.px_per_ms;
-            $(this).css('left', left);
-            _this.$element.find('#l-prompt-' + $(this).attr('id') + '.prompt').css(
-                'left',
-                parseFloat(_this.$element.find('#l-prompt-' + $(this).attr('id') + '.prompt').css('left')) + diff_x
-            );
-            _this.$element.find('#t' + $(this).attr('id')).css('left', left);
-            _this.$element.find('#r-prompt-' + $(this).attr('id') + '.prompt').css(
-                'left',
-                parseFloat(_this.$element.find('#r-prompt-' + $(this).attr('id') + '.prompt').css('left')) + diff_x
-            );
-        });
+        this.set_time_cells_position();
         if ( typeof this.options.on_move_timeslider_callback === 'function') {
-            this.options.on_move_timeslider_callback(this.start_timestamp);
+            this.options.on_move_timeslider_callback(this.options.start_timestamp);
         }
     };
 
@@ -659,7 +686,7 @@ if (typeof jQuery === 'undefined') {
                 }
                 else {
                     if ( typeof _this.options.on_change_timeslider_callback === 'function') {
-                        _this.options.on_change_timeslider_callback.bind(_this)(_this.start_timestamp);
+                        _this.options.on_change_timeslider_callback.bind(_this)(_this.options.start_timestamp);
                     }
                 }
             }
@@ -682,7 +709,14 @@ if (typeof jQuery === 'undefined') {
 
     function Plugin(options) {
         return this.each(function() {
-            new TimeSlider($(this), options);
+            var _this = $(this);
+            var data = _this.data('timeslider');
+            if (! data) {
+                _this.data('timeslider', new TimeSlider(_this, options));
+            }
+            else {
+                data.set_options(options);
+            }
         });
     }
 
