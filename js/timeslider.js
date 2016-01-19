@@ -40,13 +40,14 @@ if (typeof jQuery === 'undefined') {
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime(),   // left border
         current_timestamp: (new Date()).getTime(), // current timestamp
-        hours_per_frame: 24,                       // length of graduation ruler in hours (zoom)
+        hours_per_frame: 1,                       // length of graduation ruler in hours (zoom)
         graduation_step: 20,                       // minimum pixel between graduations
         distance_between_gtitle: 80,               // minimum pixel between titles of graduations
         update_timestamp_interval: 1000,
         update_interval: 1000,
         show_ms: false,
         init_cells: null,
+        on_toggle_timecell_callback: null,
         on_move_timeslider_callback: null,
         on_change_timeslider_callback: null,
         on_move_time_cell_callback: null,
@@ -91,7 +92,7 @@ if (typeof jQuery === 'undefined') {
         var m = Math.floor((ms - (h * (3600 * 1000))) / (60 * 1000));
         var s = Math.floor((ms - (h * (3600 * 1000)) - (m * (60 * 1000))) / 1000);
         var _ms = ms - (h * (3600 * 1000)) - (m * (60 * 1000)) - (s * 1000);
-        if (this.options['show_ms']) {
+        if (this.options.show_ms) {
             _ms = '.' + ('00' + _ms.toString()).substr(-3);
         }
         else {
@@ -252,13 +253,68 @@ if (typeof jQuery === 'undefined') {
         }
     };
 
+    /* Start new or stop current timecell */
+    TimeSlider.prototype.toggle_timecell = function(timecell) {
+        // stop timecell
+        var timecell_id = null;
+        var start = null;
+        var stop = null;
+        if (this.running_time_cell) {
+            var running_timecell = this.running_time_cell;
+            this.running_time_cell = null;
+            timecell_id = running_timecell.attr('id');
+            stop = this.options.current_timestamp;
+            if (timecell && timecell.stop) {
+                stop = timecell.stop;
+            }
+            start = parseInt(running_timecell.attr('start_timestamp'));
+            running_timecell.attr('stop_timestamp', stop);
+            var width = (stop - start) * this.px_per_ms;
+            var left = (start - this.options.start_timestamp) * this.px_per_ms;
+            this.$element.append(
+                '<div id="r-prompt-' + timecell_id + '" class="prompt" style="top:101px;left: ' + (left + width - 44).toString() + 'px;">' +
+                    '<div class="triangle-up"></div>' +
+                    '<div class="body">' + this.date_to_str(new Date(stop)) + '</div>' +
+                '</div>');
+            running_timecell.removeClass('current');
+            this.$element.find('#t' + timecell_id).removeClass('current');
+            this.set_time_duration(running_timecell);
+        }
+        // start new timecell
+        else {
+            if (! timecell || typeof timecell != 'object') {
+                timecell = {};
+            }
+            if (! timecell['start']) {
+                timecell['start'] = this.options.current_timestamp;
+            }
+            delete timecell['stop'];
+            timecell = this.add_cell(timecell);
+            if (timecell) {
+                timecell_id = timecell['_id'];
+                start = timecell['start'];
+            }
+        }
+        if (typeof this.options.on_toggle_timecell_callback == 'function') {
+            this.options.on_toggle_timecell_callback(timecell_id, start, stop);
+        }
+    };
+
     TimeSlider.prototype.remove_graduations = function() {
         this.$element.find('.graduation').remove();
         this.$element.find('.graduation-title').remove();
     };
 
-    TimeSlider.prototype.add_cells = function(cells) {
+    TimeSlider.prototype.add_cell = function(timecell) {
         var _this = this;
+
+        if (! timecell['start']) {
+            return false;
+        }
+
+        if (! timecell['_id']) {
+            timecell['_id'] = 'cell-' + timecell['start'];
+        }
 
         var get_selected_area = function(e) {
             var width = parseFloat($(this).css('width'));
@@ -382,67 +438,74 @@ if (typeof jQuery === 'undefined') {
         var style;
         var width;
         var left;
-        $.each(cells, function(index, cell) {
-            if (! _this.$element.find('#' + cell['_id']).length) {
-                t_class = '';
-                start = 'start_timestamp="' + (cell['start']).toString() + '"';
-                stop = '';
-                width = ((cell['stop'] ? (cell['stop']) : _this.options.current_timestamp) - (cell['start'])) * _this.px_per_ms;
-                left = (((cell['start']) - _this.options.start_timestamp) * _this.px_per_ms);
-                if (cell['stop']) {
-                    stop = 'stop_timestamp="' + (cell['stop']).toString() + '"';
+        if (! this.$element.find('#' + timecell['_id']).length) {
+            t_class = '';
+            start = 'start_timestamp="' + (timecell['start']).toString() + '"';
+            stop = '';
+            width = ((timecell['stop'] ? (timecell['stop']) : this.options.current_timestamp) - (timecell['start'])) * this.px_per_ms;
+            left = (((timecell['start']) - this.options.start_timestamp) * this.px_per_ms);
+            if (timecell['stop']) {
+                stop = 'stop_timestamp="' + (timecell['stop']).toString() + '"';
+            }
+            else {
+                t_class = ' current';
+            }
+            style = 'left:' + left.toString() + 'px;';
+            style += 'width:' + width.toString() + 'px;';
+            this.$element.append(
+                '<div id="'+ timecell['_id'] +'" class="timecell' + t_class + '" ' + start + ' ' + stop + ' style="' + style + '">' +
+                    this.time_duration(
+                        (timecell['stop'] ? (timecell['stop']) : this.options.current_timestamp) - (timecell['start'])
+                    ) +
+                '</div>' +
+                '<div id="t' + timecell['_id'] + '" p_id="' + timecell['_id'] + '" class="timecell-event' + t_class + '" style="' + style + '"></div>' +
+                '<div id="l-prompt-' + timecell['_id'] + '" class="prompt" style="top:9px;left:' + (left - 44).toString() + 'px;">' +
+                    '<div class="triangle-down"></div>' +
+                    '<div class="body">' + this.date_to_str(new Date(timecell['start'])) + '</div>' +
+                '</div>' +
+                (timecell['stop'] ?
+                    '<div id="r-prompt-' + timecell['_id'] + '" class="prompt" style="top:101px;left: ' + (left + width - 44).toString() + 'px;">' +
+                        '<div class="triangle-up"></div>' +
+                        '<div class="body">' + this.date_to_str(new Date(timecell['stop'])) + '</div>' +
+                    '</div>'
+                    : '')
+            );
+
+            if (! timecell['stop']) {
+                if (this.running_time_cell) {
+                    throw new Error('Can\'t run several time cells');
                 }
                 else {
-                    t_class = ' current';
+                    this.running_time_cell = this.$element.find('#' + timecell['_id']);
                 }
-                style = 'left:' + left.toString() + 'px;';
-                style += 'width:' + width.toString() + 'px;';
-                _this.$element.append(
-                    '<div id="'+ cell['_id'] +'" class="timecell' + t_class + '" ' + start + ' ' + stop + ' style="' + style + '">' +
-                        _this.time_duration(
-                            (cell['stop'] ? (cell['stop']) : _this.options.current_timestamp) - (cell['start'])
-                        ) +
-                    '</div>' +
-                    '<div id="t' + cell['_id'] + '" p_id="' + cell['_id'] + '" class="timecell-event' + t_class + '" style="' + style + '"></div>' +
-                    '<div id="l-prompt-' + cell['_id'] + '" class="prompt" style="top:9px;left:' + (left - 44).toString() + 'px;">' +
-                        '<div class="triangle-down"></div>' +
-                        '<div class="body">' + _this.date_to_str(new Date(cell['start'])) + '</div>' +
-                    '</div>' +
-                    (cell['stop'] ?
-                        '<div id="r-prompt-' + cell['_id'] + '" class="prompt" style="top:101px;left: ' + (left + width - 44).toString() + 'px;">' +
-                            '<div class="triangle-up"></div>' +
-                            '<div class="body">' + _this.date_to_str(new Date(cell['stop'])) + '</div>' +
-                        '</div>'
-                        : '')
-                );
-
-                if (! cell['stop']) {
-                    if (_this.running_time_cell) {
-                        throw new Error('Can\'t run several time cells');
-                    }
-                    else {
-                        _this.running_time_cell = _this.$element.find('#' + cell['_id']);
-                    }
-                }
-
-                // add events
-                _this.$element.find('#t' + cell['_id'])
-                    .mousedown(time_cell_mousedown_event)
-                    .mousemove(time_cell_mousemove_event)
-                    .mouseout(time_cell_mouseout_event);
             }
+
+            // add events
+            this.$element.find('#t' + timecell['_id'])
+                .mousedown(time_cell_mousedown_event)
+                .mousemove(time_cell_mousemove_event)
+                .mouseout(time_cell_mouseout_event);
+            return timecell;
+        }
+        return false;
+    };
+
+    TimeSlider.prototype.add_cells = function(cells) {
+        var _this = this;
+        $.each(cells, function(index, cell) {
+            _this.add_cell(cell);
         });
     };
 
     TimeSlider.prototype.set_time_duration = function(element) {
         if (! element) return;
-        element.html(
-            this.time_duration(
-                (element.attr('stop_timestamp') ?
-                    parseInt(element.attr('stop_timestamp')) :
-                    this.options.current_timestamp) - parseInt(element.attr('start_timestamp'))
-            )
-        );
+        var start = parseInt(element.attr('start_timestamp'));
+        var stop = element.attr('stop_timestamp') ? parseInt(element.attr('stop_timestamp')) : this.options.current_timestamp;
+        if (! this.options.show_ms) {
+            start = Math.floor(start / 1000) * 1000;
+            stop = Math.floor(stop / 1000) * 1000;
+        }
+        element.html(this.time_duration(stop - start));
     };
 
     TimeSlider.prototype.set_tooltips = function(element) {
@@ -567,7 +630,7 @@ if (typeof jQuery === 'undefined') {
             i++;
         });
         this.set_time_cells_position();
-        if ( typeof this.options.on_move_timeslider_callback === 'function') {
+        if (typeof this.options.on_move_timeslider_callback === 'function') {
             this.options.on_move_timeslider_callback(this.options.start_timestamp);
         }
     };
@@ -685,7 +748,7 @@ if (typeof jQuery === 'undefined') {
                     _this.time_cell_selected = null;
                 }
                 else {
-                    if ( typeof _this.options.on_change_timeslider_callback === 'function') {
+                    if (typeof _this.options.on_change_timeslider_callback === 'function') {
                         _this.options.on_change_timeslider_callback.bind(_this)(_this.options.start_timestamp);
                     }
                 }
@@ -707,7 +770,7 @@ if (typeof jQuery === 'undefined') {
     // TIMESLIDER PLUGIN DEFINITION
     // ============================
 
-    function Plugin(options) {
+    function Plugin(options, timecell) {
         return this.each(function() {
             var _this = $(this);
             var data = _this.data('timeslider');
@@ -715,7 +778,16 @@ if (typeof jQuery === 'undefined') {
                 _this.data('timeslider', new TimeSlider(_this, options));
             }
             else {
-                data.set_options(options);
+                if (typeof options == 'string') {
+                    switch (options) {
+                        case 'toggle':
+                            data.toggle_timecell(timecell);
+                            break;
+                    }
+                }
+                else {
+                    data.set_options(options);
+                }
             }
         });
     }
