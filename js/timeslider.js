@@ -40,7 +40,7 @@ if (typeof jQuery === 'undefined') {
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime(),   // left border
         current_timestamp: (new Date()).getTime(), // current timestamp
-        hours_per_frame: 1,                       // length of graduation ruler in hours (zoom)
+        hours_per_frame: 24,                       // length of graduation ruler in hours (zoom)
         graduation_step: 20,                       // minimum pixel between graduations
         distance_between_gtitle: 80,               // minimum pixel between titles of graduations
         update_timestamp_interval: 1000,
@@ -169,14 +169,15 @@ if (typeof jQuery === 'undefined') {
         }
     };
 
-    TimeSlider.prototype.date_to_str = function(datetime) {
+    TimeSlider.prototype.timestamp_to_date = function(timestamp) {
+        var datetime = new Date(timestamp);
         return ('0' + datetime.getUTCDate().toString()).substr(-2) + '.' +
             ('0' + (datetime.getUTCMonth() + 1).toString()).substr(-2) + '.' +
             datetime.getUTCFullYear() + ' ' +
             ('0' + datetime.getUTCHours().toString()).substr(-2) + ':' +
             ('0' + datetime.getUTCMinutes().toString()).substr(-2) + ':' +
             ('0' + datetime.getUTCSeconds().toString()).substr(-2) +
-            (this.options['show_ms'] ? ('.' + ('00' + datetime.getUTCMilliseconds().toString()).substr(-3)) : '');
+            (this.options.show_ms ? ('.' + ('00' + datetime.getUTCMilliseconds().toString()).substr(-3)) : '');
     };
 
     TimeSlider.prototype.graduation_title = function(datetime) {
@@ -274,7 +275,7 @@ if (typeof jQuery === 'undefined') {
             this.$element.append(
                 '<div id="r-prompt-' + timecell_id + '" class="prompt" style="top:101px;left: ' + (left + width - 44).toString() + 'px;">' +
                     '<div class="triangle-up"></div>' +
-                    '<div class="body">' + this.date_to_str(new Date(stop)) + '</div>' +
+                    '<div class="body">' + this.timestamp_to_date(stop) + '</div>' +
                 '</div>');
             running_timecell.removeClass('current');
             this.$element.find('#t' + timecell_id).removeClass('current');
@@ -461,12 +462,12 @@ if (typeof jQuery === 'undefined') {
                 '<div id="t' + timecell['_id'] + '" p_id="' + timecell['_id'] + '" class="timecell-event' + t_class + '" style="' + style + '"></div>' +
                 '<div id="l-prompt-' + timecell['_id'] + '" class="prompt" style="top:9px;left:' + (left - 44).toString() + 'px;">' +
                     '<div class="triangle-down"></div>' +
-                    '<div class="body">' + this.date_to_str(new Date(timecell['start'])) + '</div>' +
+                    '<div class="body">' + this.timestamp_to_date(timecell['start']) + '</div>' +
                 '</div>' +
                 (timecell['stop'] ?
                     '<div id="r-prompt-' + timecell['_id'] + '" class="prompt" style="top:101px;left: ' + (left + width - 44).toString() + 'px;">' +
                         '<div class="triangle-up"></div>' +
-                        '<div class="body">' + this.date_to_str(new Date(timecell['stop'])) + '</div>' +
+                        '<div class="body">' + this.timestamp_to_date(timecell['stop']) + '</div>' +
                     '</div>'
                     : '')
             );
@@ -511,12 +512,12 @@ if (typeof jQuery === 'undefined') {
     TimeSlider.prototype.set_tooltips = function(element) {
         if(element.l_prompt) {
             element.l_prompt.find('.body').text(
-                this.date_to_str(new Date(parseInt(element.element.attr('start_timestamp'))))
+                this.timestamp_to_date(parseInt(element.element.attr('start_timestamp')))
             );
         }
         if(element.r_prompt) {
             element.r_prompt.find('.body').text(
-                this.date_to_str(new Date(parseInt(element.element.attr('stop_timestamp'))))
+                this.timestamp_to_date(parseInt(element.element.attr('stop_timestamp')))
             );
         }
     };
