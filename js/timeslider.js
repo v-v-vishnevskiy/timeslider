@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.6.0
+ * Timeslider v0.7.0
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -35,7 +35,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.6.0';
+    TimeSlider.VERSION = '0.7.0';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime(),   // left border
@@ -47,6 +47,7 @@ if (typeof jQuery === 'undefined') {
         update_interval: 1000,
         show_ms: false,
         init_cells: null,
+        on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
         on_move_timeslider_callback: null,
         on_change_timeslider_callback: null,
@@ -298,6 +299,24 @@ if (typeof jQuery === 'undefined') {
         }
         if (typeof this.options.on_toggle_timecell_callback == 'function') {
             this.options.on_toggle_timecell_callback(timecell_id, start, stop);
+        }
+    };
+
+    /* Add finished timecell */
+    TimeSlider.prototype.add_timecell = function(timecell) {
+        var timecell_id = null;
+        var start = null;
+        var stop = null;
+        if (timecell && typeof timecell == 'object' && timecell['stop']) {
+            timecell = this.add_cell(timecell);
+            if (timecell) {
+                timecell_id = timecell['_id'];
+                start = timecell['start'];
+                stop = timecell['stop'];
+            }
+        }
+        if (typeof this.options.on_add_timecell_callback == 'function') {
+            this.options.on_add_timecell_callback(timecell_id, start, stop);
         }
     };
 
@@ -781,6 +800,10 @@ if (typeof jQuery === 'undefined') {
             else {
                 if (typeof options == 'string') {
                     switch (options) {
+                        case 'add':
+                            data.add_timecell(timecell);
+                            break;
+
                         case 'toggle':
                             data.toggle_timecell(timecell);
                             break;
