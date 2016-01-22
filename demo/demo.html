@@ -11,12 +11,14 @@
 <body>
 	<div style="margin: 50px 30px;">
 		<p>With standard options</p>
-		<p>Zoom 1...48 hours: <div id="zoom-slider123" style="width:300px;"></div></p>
+		<p>Zoom 1...48 hours:</p>
+        <div id="zoom-slider123" style="width:300px;margin-bottom:10px;"></div>
 		<div id="slider123" class="time-slider"></div>
 	</div>
 	<div style="margin: 50px 30px;">
 		<p>Using milliseconds</p>
-		<p>Zoom 1...48 hours: <div id="zoom-slider456" style="width:300px;"></div></p>
+		<p>Zoom 1...48 hours:</p>
+        <div id="zoom-slider456" style="width:300px;margin-bottom:10px;"></div>
 		<div id="slider456" class="time-slider" style="width: 65%"></div>
 	</div>
 	<p id="messages"></p>
@@ -24,6 +26,7 @@
 	<script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
 	<script src="../js/timeslider.js"></script>
 	<script type="text/javascript">
+        var current_time = (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1);
 		$(document).ready(function () {
 			(function () {
 				$('#zoom-slider123').slider({
@@ -47,11 +50,11 @@
 				});
 
 				$('#slider123').TimeSlider({
-					start_timestamp: (new Date()).getTime() - 3600 * 12 * 1000,
-					current_timestamp: (new Date()).getTime(),
+					start_timestamp: current_time - 3600 * 12 * 1000,
+					current_timestamp: current_time,
 					init_cells: [
-						{'_id': 'c1', 'start': ((new Date()).getTime() - (3600 * 5.4 * 1000) + 1234), 'stop': (new Date()).getTime() - 3600 * 3.2 * 1000},
-						{'_id': 'c2', 'start': ((new Date()).getTime() - (3600 * 2.1 * 1000))}
+						{'_id': 'c1', 'start': (current_time - (3600 * 5.4 * 1000) + 1234), 'stop': current_time - 3600 * 3.2 * 1000},
+						{'_id': 'c2', 'start': (current_time - (3600 * 2.1 * 1000))}
 					]
 				});
 
@@ -61,11 +64,11 @@
 					show_ms: true,
 					hours_per_frame: 9,
 					graduation_step: 6,
-					start_timestamp: (new Date()).getTime() - 3600 * 7 * 1000,
-					current_timestamp: (new Date()).getTime(),
+					start_timestamp: current_time - 3600 * 7 * 1000,
+					current_timestamp: current_time,
 					init_cells: [
-						{'_id': 'c1', 'start': ((new Date()).getTime() - (3600 * 6.2 * 1000) + 5678), 'stop': (new Date()).getTime() - 3600 * 4.8 * 1000},
-						{'_id': 'c2', 'start': ((new Date()).getTime() - (3600 * 3.1 * 1000))}
+						{'_id': 'c1', 'start': (current_time - (3600 * 6.2 * 1000) + 5678), 'stop': current_time - 3600 * 4.8 * 1000},
+						{'_id': 'c2', 'start': (current_time - (3600 * 3.1 * 1000))}
 					]
 				});
 		    })();
