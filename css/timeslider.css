@@ -5,20 +5,23 @@
 }
 
 .time-slider {
-    height: 150px;
-    position: relative;
-    overflow: hidden;
+    height: 50px;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+.time-slider .ruler {
+    height: 100%;
+    position: relative;
+    overflow: hidden;
     z-index: 1;
 }
 
-.time-slider .bg {
-    top: 50px;
+.time-slider .ruler .bg {
     left: 0;
     width: 100%;
     height: 50px;
@@ -28,8 +31,7 @@
     z-index: 2;
 }
 
-.time-slider .bg-event {
-    top: 50px;
+.time-slider .ruler .bg-event {
     left: 0;
     width: 100%;
     height: 50px;
@@ -39,8 +41,7 @@
     z-index: 6;
 }
 
-.time-slider .current-time-caret {
-    top: 50px;
+.time-slider .ruler .current-time-caret {
     width: 2px;
     height: 50px;
     background-color: #ff0000;
@@ -48,10 +49,10 @@
     z-index: 5;
 }
 
-/*----------------------*/
+/* ----- graduations ----- */
 
-.time-slider .graduation {
-    top: 88px;
+.time-slider .ruler .graduation {
+    top: 38px;
     width: 1px;
     height: 12px;
     background-color: #cccccc;
@@ -59,8 +60,8 @@
     z-index: 3;
 }
 
-.time-slider .graduation-title {
-    top: 102px;
+.time-slider .ruler .graduation-title {
+    top: 52px;
     width: 80px;
     cursor: default;
     color: #555555;
@@ -73,22 +74,22 @@
     z-index: 3;
 }
 
-.time-slider .graduation.middle {
-    top: 75px;
+.time-slider .ruler .graduation.middle {
+    top: 25px;
     width: 1px;
     height: 25px;
 }
 
-.time-slider .graduation.big {
-    top: 50px;
+.time-slider .ruler .graduation.big {
+    top: 0;
     width: 2px;
     height: 50px;
 }
 
-/*----------------------*/
+/* ----- timecells  ----- */
 
-.time-slider .timecell {
-    top: 57px;
+.time-slider .ruler .timecell {
+    top: 7px;
     height: 36px;
     padding: 1px;
     position: absolute;
@@ -105,13 +106,13 @@
     border-radius: 4px;
 }
 
-.time-slider .timecell.current {
+.time-slider .ruler .timecell.current {
     background-color: #ff6d29;
     border-radius: 4px 0 0 4px;
 }
 
-.time-slider .timecell-event {
-    top: 57px;
+.time-slider .ruler .timecell-event {
+    top: 7px;
     height: 36px;
     background-color: transparent;
     position: absolute;
@@ -120,21 +121,33 @@
     border-radius: 4px;
 }
 
-.time-slider .timecell-event.hover{
+.time-slider .ruler .timecell-event.hover{
     border: 1px dashed #204d74;
 }
 
-.time-slider .timecell-event.moving {
+.time-slider .ruler .timecell-event.moving {
     border-color: #ff0716;
 }
 
-.time-slider .timecell-event.current {
+.time-slider .ruler .timecell-event.current {
     border-right: none;
     border-radius: 4px 0 0 4px;
     cursor: default;
 }
 
-.time-slider .prompt {
+
+/* ----- prompts ----- */
+
+.time-slider .prompts {
+    top: 0;
+    left: 0;
+    position: relative;
+    overflow: hidden;
+    height: 150px;
+    width: 100%;
+}
+
+.time-slider .prompts .prompt {
     width: 86px;
     height: 40px;
     position: absolute;
@@ -158,7 +171,7 @@
     line-break: auto;
 }
 
-.time-slider .prompt .body {
+.time-slider .prompts .prompt .body {
     padding: 3px 8px;
     color: #fff;
     text-align: center;
@@ -166,7 +179,7 @@
     border-radius: 4px;
 }
 
-.time-slider .prompt .triangle-up {
+.time-slider .prompts .prompt .triangle-up {
     top: -5px;
     left: 39px;
     position: absolute;
@@ -177,7 +190,7 @@
     border-bottom: 5px solid #000;
 }
 
-.time-slider .prompt .triangle-down {
+.time-slider .prompts .prompt .triangle-down {
     top: 40px;
     left: 39px;
     position: absolute;
