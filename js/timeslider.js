@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.8.1
+ * Timeslider v0.8.6
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -38,7 +38,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.8.1';
+    TimeSlider.VERSION = '0.8.6';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime(),   // left border
@@ -53,6 +53,7 @@ if (typeof jQuery === 'undefined') {
         on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
         on_dblclick_timecell_callback: null,
+        on_dblclick_timeslider_callback: null,
         on_move_timeslider_callback: null,
         on_change_timeslider_callback: null,
         on_move_time_cell_callback: null,
@@ -83,7 +84,7 @@ if (typeof jQuery === 'undefined') {
 
         this.px_per_ms = this.$element.width() / (this.options.hours_per_frame * 3600 * 1000);
 
-            // append background color
+        // append background color
         this.$ruler.append('<div class="bg"></div><div class="bg-event"></div>');
 
         this.add_time_caret();
@@ -211,11 +212,20 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.add_events = function() {
+        var _this = this;
         window.setInterval(this.set_current_timestamp(), this.options['update_timestamp_interval']);
         window.setInterval(this.set_running_elements(), this.options['update_interval']);
         $('body').mouseup(this.mouse_up_event());
         $('body').mousemove(this.cursor_moving_event());
         this.$ruler.find('.bg-event').mousedown(this.timeslider_mouse_down_event());
+        if (typeof this.options.on_dblclick_timeslider_callback == 'function') {
+            this.$ruler.find('.bg-event').dblclick(function () {
+                _this.options.on_dblclick_timeslider_callback(
+                    _this.options.start_timestamp,
+                    _this.options.current_timestamp
+                );
+            });
+        }
     };
 
     TimeSlider.prototype.add_time_caret = function() {
