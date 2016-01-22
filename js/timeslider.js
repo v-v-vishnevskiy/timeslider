@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.8.0
+ * Timeslider v0.8.1
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -20,6 +20,8 @@ if (typeof jQuery === 'undefined') {
 (function ($) {
     var TimeSlider = function(element, options) {
         this.$element = null;
+        this.$ruler = null;
+        this.$prompts = null;
         this.options = null;
         this.init_timestamp = new Date();
         this.frozen_current_timestamp = 0;
@@ -30,12 +32,13 @@ if (typeof jQuery === 'undefined') {
         this.running_time_cell = null;
         this.time_caret = null;
         this.steps_by_minutes = [1, 2, 5, 10, 15, 20, 30, 60, 120, 180, 240, 360, 720, 1440];
+        this.gt_height = 0;
 
         this.init(element, options);
         return this;
     };
 
-    TimeSlider.VERSION = '0.8.0';
+    TimeSlider.VERSION = '0.8.1';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime(),   // left border
@@ -59,6 +62,17 @@ if (typeof jQuery === 'undefined') {
 
     TimeSlider.prototype.init = function(element, options) {
         this.$element = $(element);
+        this.$element.append('<div class="graduation-title" style="display:none">init</div>');
+        this.gt_height = this.$element.find('.graduation-title').height();
+        this.$element.find('.graduation-title').remove();
+        this.$element.append(
+            '<div class="ruler" style="height:' + (this.$element.height() + this.gt_height) + 'px;"></div>' +
+            '<div class="prompts" style="top:-' + (this.$element.height() * 2 + this.gt_height) + 'px;"></div>'
+        );
+        this.$element.height(this.$element.height() + this.gt_height);
+        this.$ruler = this.$element.find('.ruler');
+        this.$prompts = this.$element.find('.prompts');
+
         if (this.$element.attr('start_timestamp')) {
             options['start_timestamp'] = parseInt(this.$element.attr('start_timestamp'));
         }
@@ -69,8 +83,8 @@ if (typeof jQuery === 'undefined') {
 
         this.px_per_ms = this.$element.width() / (this.options.hours_per_frame * 3600 * 1000);
 
-        // append background color
-        this.$element.append('<div class="bg"></div><div class="bg-event"></div>');
+            // append background color
+        this.$ruler.append('<div class="bg"></div><div class="bg-event"></div>');
 
         this.add_time_caret();
         this.add_graduations();
@@ -146,8 +160,8 @@ if (typeof jQuery === 'undefined') {
             this.frozen_current_timestamp = options['current_timestamp'] = options['current_timestamp'];
         }
 
-        if (options['graduation_step'] > this.$element.width()) {
-            options['graduation_step'] = this.$element.width();
+        if (options['graduation_step'] > this.$ruler.width()) {
+            options['graduation_step'] = this.$ruler.width();
         }
         else if (options['graduation_step'] < 5) {
             options['graduation_step'] = 5;
@@ -162,7 +176,7 @@ if (typeof jQuery === 'undefined') {
             // zoom
             if (options.hours_per_frame != this.options.hours_per_frame) {
                 this.options.hours_per_frame = options.hours_per_frame;
-                this.px_per_ms = this.$element.width() / (this.options.hours_per_frame * 3600 * 1000);
+                this.px_per_ms = this.$ruler.width() / (this.options.hours_per_frame * 3600 * 1000);
                 this.remove_graduations();
                 this.add_graduations();
                 this.set_time_caret_position();
@@ -201,17 +215,17 @@ if (typeof jQuery === 'undefined') {
         window.setInterval(this.set_running_elements(), this.options['update_interval']);
         $('body').mouseup(this.mouse_up_event());
         $('body').mousemove(this.cursor_moving_event());
-        this.$element.find('.bg-event').mousedown(this.timeslider_mouse_down_event());
+        this.$ruler.find('.bg-event').mousedown(this.timeslider_mouse_down_event());
     };
 
     TimeSlider.prototype.add_time_caret = function() {
-        this.$element.append('<div class="current-time-caret"></div>');
-        this.time_caret = this.$element.find('.current-time-caret');
+        this.$ruler.append('<div class="current-time-caret"></div>');
+        this.time_caret = this.$ruler.find('.current-time-caret');
         this.set_time_caret_position();
     };
 
     TimeSlider.prototype.add_graduations = function() {
-        var px_per_minute = this.$element.width() / (this.options.hours_per_frame * 60);
+        var px_per_minute = this.$ruler.width() / (this.options.hours_per_frame * 60);
         var px_per_step = this.options.graduation_step;
         var min_step = px_per_step / px_per_minute;
         for (var i = 0; i < this.steps_by_minutes.length; i++) {
@@ -232,7 +246,7 @@ if (typeof jQuery === 'undefined') {
 
         var ms_offset = this.ms_to_next_step(this.options.start_timestamp, min_step * 60 * 1000);
         var minute_caret = this.options.start_timestamp + ms_offset - (min_step * 60 * 1000) * 4;
-        var num_steps = this.$element.width() / px_per_step;
+        var num_steps = this.$ruler.width() / px_per_step;
         var date;
         var caret_class;
         var left;
@@ -246,8 +260,8 @@ if (typeof jQuery === 'undefined') {
             else if (minute_caret / (60 * 1000) % medium_step == 0) {
                 caret_class = 'middle';
             }
-            this.$element.append('<div id="hour' + i + '" class="graduation ' + caret_class + '" style="left: ' + left.toString() + 'px"></div>');
-            this.$element.append(
+            this.$ruler.append('<div id="hour' + i + '" class="graduation ' + caret_class + '" style="left: ' + left.toString() + 'px"></div>');
+            this.$ruler.append(
                 '<div id="graduation-title-hour' + i + '" class="graduation-title' + (caret_class ? '' : ' hidden') + '" style="left:' + (left - 40).toString() + 'px">' +
                     this.graduation_title(date) +
                 '</div>'
@@ -274,13 +288,13 @@ if (typeof jQuery === 'undefined') {
             running_timecell.attr('stop_timestamp', stop);
             var width = (stop - start) * this.px_per_ms;
             var left = (start - this.options.start_timestamp) * this.px_per_ms;
-            this.$element.append(
+            this.$prompts.append(
                 '<div id="r-prompt-' + timecell_id + '" class="prompt" style="top:101px;left: ' + (left + width - 44).toString() + 'px;">' +
                     '<div class="triangle-up"></div>' +
                     '<div class="body">' + this.timestamp_to_date(stop) + '</div>' +
                 '</div>');
             running_timecell.removeClass('current');
-            this.$element.find('#t' + timecell_id).removeClass('current');
+            this.$ruler.find('#t' + timecell_id).removeClass('current');
             this.set_time_duration(running_timecell);
         }
         // start new timecell
@@ -322,8 +336,8 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.remove_graduations = function() {
-        this.$element.find('.graduation').remove();
-        this.$element.find('.graduation-title').remove();
+        this.$ruler.find('.graduation').remove();
+        this.$ruler.find('.graduation-title').remove();
     };
 
     TimeSlider.prototype.add_cell = function(timecell) {
@@ -357,8 +371,8 @@ if (typeof jQuery === 'undefined') {
                 switch(get_selected_area.call(this, e)) {
                     case 'left':
                         _this.time_cell_selected = {
-                            element: _this.$element.find('#' + id),
-                            l_prompt: _this.$element.find('#l-prompt-' + id + '.prompt'),
+                            element: _this.$ruler.find('#' + id),
+                            l_prompt: _this.$prompts.find('#l-prompt-' + id + '.prompt'),
                             t_element: $(this),
                             hover: true
                         };
@@ -368,10 +382,10 @@ if (typeof jQuery === 'undefined') {
                     case 'center':
                         if (! $(this).hasClass('current')) {
                             _this.time_cell_selected = {
-                                element: _this.$element.find('#' + id),
-                                l_prompt: _this.$element.find('#l-prompt-' + id + '.prompt'),
+                                element: _this.$ruler.find('#' + id),
+                                l_prompt: _this.$prompts.find('#l-prompt-' + id + '.prompt'),
                                 t_element: $(this),
-                                r_prompt: _this.$element.find('#r-prompt-' + id + '.prompt'),
+                                r_prompt: _this.$prompts.find('#r-prompt-' + id + '.prompt'),
                                 hover: true
                             };
                             _this.is_mouse_down_left = true;
@@ -381,9 +395,9 @@ if (typeof jQuery === 'undefined') {
                     case 'right':
                         if (! $(this).hasClass('current')) {
                             _this.time_cell_selected = {
-                                element: _this.$element.find('#' + id),
+                                element: _this.$ruler.find('#' + id),
                                 t_element: $(this),
-                                r_prompt: _this.$element.find('#r-prompt-' + id + '.prompt'),
+                                r_prompt: _this.$prompts.find('#r-prompt-' + id + '.prompt'),
                                 hover: true
                             };
                             _this.is_mouse_down_left = true;
@@ -401,31 +415,31 @@ if (typeof jQuery === 'undefined') {
                 $(this).addClass('hover');
                 switch(get_selected_area.call(this, e)) {
                     case 'left':
-                        _this.$element.find('#l-prompt-' + id + '.prompt').fadeIn(150);
-                        _this.$element.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                        _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
+                        _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
                         $(this).css('cursor', 'w-resize');
                         break;
                     case 'center':
                         if ($(this).hasClass('current')) {
                             $(this).css('cursor', 'default');
-                            _this.$element.find('#l-prompt-' + id + '.prompt').fadeOut(150);
-                            _this.$element.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
                         }
                         else {
-                            _this.$element.find('#l-prompt-' + id + '.prompt').fadeIn(150);
-                            _this.$element.find('#r-prompt-' + id + '.prompt').fadeIn(150);
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
+                            _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeIn(150);
                             $(this).css('cursor', 'move');
                         }
                         break;
                     case 'right':
                         if ($(this).hasClass('current')) {
                             $(this).css('cursor', 'default');
-                            _this.$element.find('#l-prompt-' + id + '.prompt').fadeOut(150);
-                            _this.$element.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
                         }
                         else {
-                            _this.$element.find('#l-prompt-' + id + '.prompt').fadeOut(150);
-                            _this.$element.find('#r-prompt-' + id + '.prompt').fadeIn(150);
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeIn(150);
                             $(this).css('cursor', 'e-resize');
                         }
                         break;
@@ -441,8 +455,8 @@ if (typeof jQuery === 'undefined') {
         var time_cell_mouseout_event = function(e) {
             if (! _this.is_mouse_down_left) {
                 var id = $(this).attr('p_id');
-                _this.$element.find('#l-prompt-' + id + '.prompt').fadeOut(150);
-                _this.$element.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
                 $(this).css('cursor', 'move');
                 $(this).removeClass('hover');
             }
@@ -459,7 +473,7 @@ if (typeof jQuery === 'undefined') {
         var style;
         var width;
         var left;
-        if (! this.$element.find('#' + timecell['_id']).length) {
+        if (! this.$ruler.find('#' + timecell['_id']).length) {
             t_class = '';
             start = 'start_timestamp="' + (timecell['start']).toString() + '"';
             stop = '';
@@ -473,13 +487,15 @@ if (typeof jQuery === 'undefined') {
             }
             style = 'left:' + left.toString() + 'px;';
             style += 'width:' + width.toString() + 'px;';
-            this.$element.append(
+            this.$ruler.append(
                 '<div id="'+ timecell['_id'] +'" class="timecell' + t_class + '" ' + start + ' ' + stop + ' style="' + style + '">' +
                     this.time_duration(
                         (timecell['stop'] ? (timecell['stop']) : this.options.current_timestamp) - (timecell['start'])
                     ) +
                 '</div>' +
-                '<div id="t' + timecell['_id'] + '" p_id="' + timecell['_id'] + '" class="timecell-event' + t_class + '" style="' + style + '"></div>' +
+                '<div id="t' + timecell['_id'] + '" p_id="' + timecell['_id'] + '" class="timecell-event' + t_class + '" style="' + style + '"></div>'
+            );
+            this.$prompts.append(
                 '<div id="l-prompt-' + timecell['_id'] + '" class="prompt" style="top:9px;left:' + (left - 44).toString() + 'px;">' +
                     '<div class="triangle-down"></div>' +
                     '<div class="body">' + this.timestamp_to_date(timecell['start']) + '</div>' +
@@ -497,12 +513,12 @@ if (typeof jQuery === 'undefined') {
                     throw new Error('Can\'t run several time cells');
                 }
                 else {
-                    this.running_time_cell = this.$element.find('#' + timecell['_id']);
+                    this.running_time_cell = this.$ruler.find('#' + timecell['_id']);
                 }
             }
 
             // add events
-            var t_element = this.$element.find('#t' + timecell['_id']);
+            var t_element = this.$ruler.find('#t' + timecell['_id']);
             t_element
                 .mousedown(time_cell_mousedown_event)
                 .mousemove(time_cell_mousemove_event)
@@ -510,7 +526,7 @@ if (typeof jQuery === 'undefined') {
             if (typeof this.options.on_dblclick_timecell_callback == 'function') {
                 t_element.dblclick(function() {
                     var p_id = $(this).attr('p_id');
-                    var cell_element = _this.$element.find('#' + p_id);
+                    var cell_element = _this.$ruler.find('#' + p_id);
                     var start = parseInt(cell_element.attr('start_timestamp'));
                     var stop = cell_element.attr('stop_timestamp');
                     stop = stop ? parseInt(stop) : null;
@@ -573,7 +589,7 @@ if (typeof jQuery === 'undefined') {
                 var width = (_this.options.current_timestamp - parseInt(_this.running_time_cell.attr('start_timestamp'))) *
                     _this.px_per_ms;
                 _this.running_time_cell.css('width', width);
-                _this.$element.find('#t' + _this.running_time_cell.attr('id')).css('width', width);
+                _this.$ruler.find('#t' + _this.running_time_cell.attr('id')).css('width', width);
             }
         }
     };
@@ -584,7 +600,7 @@ if (typeof jQuery === 'undefined') {
 
     TimeSlider.prototype.set_time_cells_position = function() {
         var _this = this;
-        this.$element.children('.timecell').each(function () {
+        this.$ruler.children('.timecell').each(function () {
             var start_timestamp = parseInt($(this).attr('start_timestamp'));
             var left = (start_timestamp - _this.options.start_timestamp) * _this.px_per_ms;
             var width = (($(this).attr('stop_timestamp')
@@ -592,12 +608,12 @@ if (typeof jQuery === 'undefined') {
                 : _this.options.current_timestamp) - start_timestamp) * _this.px_per_ms;
             $(this).css('left', left);
             $(this).css('width', width);
-            _this.$element.find('#l-prompt-' + $(this).attr('id') + '.prompt').css(
+            _this.$prompts.find('#l-prompt-' + $(this).attr('id') + '.prompt').css(
                 'left',
                 left - 44
             );
-            _this.$element.find('#t' + $(this).attr('id')).css('left', left).css('width', width);
-            _this.$element.find('#r-prompt-' + $(this).attr('id') + '.prompt').css(
+            _this.$ruler.find('#t' + $(this).attr('id')).css('left', left).css('width', width);
+            _this.$prompts.find('#r-prompt-' + $(this).attr('id') + '.prompt').css(
                 'left',
                 left + width - 44
             );
@@ -610,7 +626,7 @@ if (typeof jQuery === 'undefined') {
 
         this.set_time_caret_position();
 
-        var px_per_minute = this.$element.width() / (this.options.hours_per_frame * 60);
+        var px_per_minute = this.$ruler.width() / (this.options.hours_per_frame * 60);
         var px_per_step = this.options.graduation_step;
         var min_step = px_per_step / px_per_minute;
         for (var i = 0; i < this.steps_by_minutes.length; i++) {
@@ -636,7 +652,7 @@ if (typeof jQuery === 'undefined') {
         var left;
         var datetime_caret;
         var i = -4;
-        this.$element.children('.graduation').each(function () {
+        this.$ruler.children('.graduation').each(function () {
             caret_class = '';
             date = new Date(minute_caret);
             left = i * px_per_step + _this.px_per_ms * ms_offset;
@@ -651,7 +667,7 @@ if (typeof jQuery === 'undefined') {
                 $(this).addClass(caret_class);
             }
             $(this).css('left', left);
-            datetime_caret = _this.$element.find('#graduation-title-' + $(this).attr('id')).css('left', left - 40).html(_this.graduation_title(date));
+            datetime_caret = _this.$ruler.find('#graduation-title-' + $(this).attr('id')).css('left', left - 40).html(_this.graduation_title(date));
             if (caret_class) {
                 datetime_caret.removeClass('hidden');
             }
@@ -765,8 +781,8 @@ if (typeof jQuery === 'undefined') {
                 _this.is_mouse_down_left = false;
                 if (_this.time_cell_selected) {
                     if (! _this.time_cell_selected.hover) {
-                        _this.$element.find('#l-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
-                        _this.$element.find('#r-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
+                        _this.$prompts.find('#l-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
+                        _this.$prompts.find('#r-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
                         _this.time_cell_selected.t_element.removeClass('hover');
                     }
                     if (typeof _this.options.on_change_time_cell_callback === 'function') {
