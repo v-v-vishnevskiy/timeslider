@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.9.1
+ * Timeslider v0.9.2
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -38,11 +38,11 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.9.1';
+    TimeSlider.VERSION = '0.9.2';
 
     TimeSlider.DEFAULTS = {
-        start_timestamp: (new Date()).getTime(),   // left border
-        current_timestamp: (new Date()).getTime(), // current timestamp
+        start_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1),   // left border
+        current_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1), // current timestamp
         hours_per_frame: 24,                       // length of graduation ruler in hours (zoom)
         graduation_step: 20,                       // minimum pixel between graduations
         distance_between_gtitle: 80,               // minimum pixel between titles of graduations
