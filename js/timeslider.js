@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.8.6
+ * Timeslider v0.9.1
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -38,7 +38,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.8.6';
+    TimeSlider.VERSION = '0.9.1';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime(),   // left border
@@ -52,6 +52,8 @@ if (typeof jQuery === 'undefined') {
         init_cells: null,
         on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
+        on_remove_timecell_callback: null,
+        on_remove_all_timecells_callback: null,
         on_dblclick_timecell_callback: null,
         on_dblclick_timeslider_callback: null,
         on_move_timeslider_callback: null,
@@ -343,6 +345,57 @@ if (typeof jQuery === 'undefined') {
         if (typeof this.options.on_add_timecell_callback == 'function') {
             this.options.on_add_timecell_callback(timecell_id, start, stop);
         }
+    };
+
+    TimeSlider.prototype.remove_timecell = function(timecell_id) {
+        var timecell = this.$ruler.find('#' + timecell_id);
+        var start = null;
+        var stop = null;
+        if (timecell.length) {
+            start = parseInt(timecell.attr('start_timestamp'));
+            if (this.running_time_cell && this.running_time_cell.attr('id') == timecell_id) {
+                this.running_time_cell = null;
+            }
+            else {
+                stop = parseInt(timecell.attr('stop_timestamp'));
+            }
+            timecell.remove();
+            this.$ruler.find('#t' + timecell_id).remove();
+            this.$prompts.find('#l-prompt-' + timecell_id).remove();
+            this.$prompts.find('#r-prompt-' + timecell_id).remove();
+        }
+        else {
+            timecell_id = null;
+        }
+        if (typeof this.options.on_remove_timecell_callback == 'function') {
+            this.options.on_remove_timecell_callback(timecell_id, start, stop);
+        }
+    };
+
+    TimeSlider.prototype.remove_all_timecells = function() {
+        var timecells = [];
+        var _this = this;
+        var $timecells = this.$ruler.children('.timecell');
+        var defer = $.Deferred();
+        $timecells.each(function (index) {
+            timecells.push({
+                _id: $(this).attr('id'),
+                start: parseInt($(this).attr('start_timestamp')),
+                stop: $(this).attr('stop_timestamp') ? parseInt($(this).attr('stop_timestamp')) : null
+            });
+            if (index + 1 == $timecells.length) {
+                defer.resolve(timecells);
+            }
+        });
+        $.when(defer).then(function (result) {
+            this.running_time_cell = null;
+            _this.$ruler.children('.timecell').remove();
+            _this.$ruler.children('.timecell-event').remove();
+            _this.$prompts.children('.prompt').remove();
+            if (typeof _this.options.on_remove_all_timecells_callback == 'function') {
+                _this.options.on_remove_all_timecells_callback(result);
+            }
+        });
     };
 
     TimeSlider.prototype.remove_graduations = function() {
@@ -844,6 +897,14 @@ if (typeof jQuery === 'undefined') {
 
                         case 'toggle':
                             data.toggle_timecell(timecell);
+                            break;
+
+                        case 'remove':
+                            data.remove_timecell(timecell);
+                            break;
+
+                        case 'remove_all':
+                            data.remove_all_timecells();
                             break;
                     }
                 }
