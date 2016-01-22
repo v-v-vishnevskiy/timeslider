@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.7.0
+ * Timeslider v0.8.0
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -35,7 +35,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.7.0';
+    TimeSlider.VERSION = '0.8.0';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime(),   // left border
@@ -49,6 +49,7 @@ if (typeof jQuery === 'undefined') {
         init_cells: null,
         on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
+        on_dblclick_timecell_callback: null,
         on_move_timeslider_callback: null,
         on_change_timeslider_callback: null,
         on_move_time_cell_callback: null,
@@ -501,10 +502,21 @@ if (typeof jQuery === 'undefined') {
             }
 
             // add events
-            this.$element.find('#t' + timecell['_id'])
+            var t_element = this.$element.find('#t' + timecell['_id']);
+            t_element
                 .mousedown(time_cell_mousedown_event)
                 .mousemove(time_cell_mousemove_event)
                 .mouseout(time_cell_mouseout_event);
+            if (typeof this.options.on_dblclick_timecell_callback == 'function') {
+                t_element.dblclick(function() {
+                    var p_id = $(this).attr('p_id');
+                    var cell_element = _this.$element.find('#' + p_id);
+                    var start = parseInt(cell_element.attr('start_timestamp'));
+                    var stop = cell_element.attr('stop_timestamp');
+                    stop = stop ? parseInt(stop) : null;
+                    _this.options.on_dblclick_timecell_callback(p_id, start, stop);
+                });
+            }
             return timecell;
         }
         return false;
