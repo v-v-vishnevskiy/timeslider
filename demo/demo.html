@@ -9,6 +9,7 @@
 	<link href="../css/timeslider.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
+	<h3 id="version"></h3>
 	<div style="margin: 50px 30px;">
 		<p>With standard options</p>
 		<p>Zoom 1...48 hours:</p>
@@ -29,13 +30,14 @@
         var current_time = (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1);
 		$(document).ready(function () {
 			(function () {
+				$('#version').text('Version: '+ $.fn.TimeSlider.VERSION);
 				$('#zoom-slider123').slider({
 					min: 1,
 					max: 48,
 					value: 24,
 					step: 0.2,
 					slide: function(event, ui) {
-						$('#slider123').TimeSlider({hours_per_frame: ui.value});
+						$('#slider123').TimeSlider({hours_per_ruler: ui.value});
 					}
 				});
 
@@ -45,16 +47,25 @@
 					value: 9,
 					step: 0.2,
 					slide: function(event, ui) {
-						$('#slider456').TimeSlider({hours_per_frame: ui.value});
+						$('#slider456').TimeSlider({hours_per_ruler: ui.value});
 					}
 				});
 
 				$('#slider123').TimeSlider({
 					start_timestamp: current_time - 3600 * 12 * 1000,
-					current_timestamp: current_time,
 					init_cells: [
-						{'_id': 'c1', 'start': (current_time - (3600 * 5.4 * 1000) + 1234), 'stop': current_time - 3600 * 3.2 * 1000},
-						{'_id': 'c2', 'start': (current_time - (3600 * 2.1 * 1000))}
+						{
+                            '_id': 'c1',
+                            'start': (current_time - (3600 * 5.4 * 1000) + 1234),
+                            'stop': current_time - 3600 * 3.2 * 1000,
+                            'style': {
+                                'background-color': '#76C4FF'
+                            }
+                        },
+						{
+                            '_id': 'c2',
+                            'start': (current_time - (3600 * 2.1 * 1000))
+                        }
 					]
 				});
 
@@ -62,13 +73,12 @@
 					update_timestamp_interval: 10,
 					update_interval: 10,
 					show_ms: true,
-					hours_per_frame: 9,
+					hours_per_ruler: 9,
 					graduation_step: 6,
 					start_timestamp: current_time - 3600 * 7 * 1000,
-					current_timestamp: current_time,
 					init_cells: [
 						{'_id': 'c1', 'start': (current_time - (3600 * 6.2 * 1000) + 5678), 'stop': current_time - 3600 * 4.8 * 1000},
-						{'_id': 'c2', 'start': (current_time - (3600 * 3.1 * 1000))}
+						{'_id': 'c2', 'start': (current_time - (3600 * 3.1 * 1000) + 864), 'stop': current_time}
 					]
 				});
 		    })();
