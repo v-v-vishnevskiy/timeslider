@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.9.3
+ * Timeslider v0.9.4
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -40,7 +40,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.9.3';
+    TimeSlider.VERSION = '0.9.4';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1),   // left border
@@ -215,6 +215,24 @@ if (typeof jQuery === 'undefined') {
         return remainder ? step - remainder : 0;
     };
 
+    TimeSlider.prototype.set_style = function(style, element) {
+        if (style) {
+            if (element) {
+                element.css(style);
+            }
+            else {
+                var result = '';
+                for (var property in style) {
+                    if (style.hasOwnProperty(property)) {
+                        result += property + ':' + style[property] + ';';
+                    }
+                }
+                return result;
+            }
+        }
+        return '';
+    };
+
     TimeSlider.prototype.add_events = function() {
         var _this = this;
         window.setInterval(this.set_current_timestamp(), this.options['update_timestamp_interval']);
@@ -310,6 +328,7 @@ if (typeof jQuery === 'undefined') {
             running_timecell.removeClass('current');
             this.$ruler.find('#t' + timecell_id).removeClass('current');
             this.set_time_duration(running_timecell);
+            this.set_style(timecell['style'], running_timecell);
         }
         // start new timecell
         else {
@@ -552,8 +571,9 @@ if (typeof jQuery === 'undefined') {
             }
             style = 'left:' + left.toString() + 'px;';
             style += 'width:' + width.toString() + 'px;';
+            var timecell_style = this.set_style(timecell['style']);
             this.$ruler.append(
-                '<div id="'+ timecell['_id'] +'" class="timecell' + t_class + '" ' + start + ' ' + stop + ' style="' + style + '">' +
+                '<div id="'+ timecell['_id'] +'" class="timecell' + t_class + '" ' + start + ' ' + stop + ' style="' + style + timecell_style + '">' +
                     this.time_duration(
                         (timecell['stop'] ? (timecell['stop']) : this.options.current_timestamp) - (timecell['start'])
                     ) +

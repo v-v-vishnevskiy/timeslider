@@ -54,8 +54,18 @@
 				$('#slider123').TimeSlider({
 					start_timestamp: current_time - 3600 * 12 * 1000,
 					init_cells: [
-						{'_id': 'c1', 'start': (current_time - (3600 * 5.4 * 1000) + 1234), 'stop': current_time - 3600 * 3.2 * 1000},
-						{'_id': 'c2', 'start': (current_time - (3600 * 2.1 * 1000))}
+						{
+                            '_id': 'c1',
+                            'start': (current_time - (3600 * 5.4 * 1000) + 1234),
+                            'stop': current_time - 3600 * 3.2 * 1000,
+                            'style': {
+                                'background-color': '#76C4FF'
+                            }
+                        },
+						{
+                            '_id': 'c2',
+                            'start': (current_time - (3600 * 2.1 * 1000))
+                        }
 					]
 				});
 
