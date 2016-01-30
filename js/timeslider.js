@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.9.2
+ * Timeslider v0.9.3
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -9,13 +9,15 @@ if (typeof jQuery === 'undefined') {
     throw new Error('Timeslider\'s JavaScript requires jQuery')
 }
 
+
 (function ($) {
     'use strict';
     var version = $.fn.jquery.split(' ')[0].split('.');
-    if ((version[0] < 2 && version[1] < 9) || (version[0] == 1 && version[1] == 9 && version[2] < 1)) {
-        throw new Error('Timeslider\'s JavaScript requires jQuery version 1.9.1 or higher');
+    if ((version[0] < 2 && version[1] < 6) || (version[0] == 1 && version[1] == 6 && version[2] < 1)) {
+        throw new Error('Timeslider\'s JavaScript requires jQuery version 1.6.1 or higher');
     }
 }(jQuery));
+
 
 (function ($) {
     var TimeSlider = function(element, options) {
@@ -38,29 +40,29 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.9.2';
+    TimeSlider.VERSION = '0.9.3';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1),   // left border
         current_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1), // current timestamp
-        hours_per_frame: 24,                       // length of graduation ruler in hours (zoom)
-        graduation_step: 20,                       // minimum pixel between graduations
-        distance_between_gtitle: 80,               // minimum pixel between titles of graduations
-        update_timestamp_interval: 1000,
-        update_interval: 1000,
-        show_ms: false,
-        init_cells: null,
+        hours_per_ruler: 24,                    // length of graduation ruler in hours (min 1, max 48)
+        graduation_step: 20,                    // minimum pixels between graduations
+        distance_between_gtitle: 80,            // minimum pixels between titles of graduations
+        update_timestamp_interval: 1000,        // interval for updating current time
+        update_interval: 1000,                  // interval for updating elements
+        show_ms: false,                         // whether to show the milliseconds?
+        init_cells: null,                       // list of time cells or function
         on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
         on_remove_timecell_callback: null,
         on_remove_all_timecells_callback: null,
         on_dblclick_timecell_callback: null,
-        on_dblclick_timeslider_callback: null,
-        on_move_timeslider_callback: null,
-        on_change_timeslider_callback: null,
-        on_move_time_cell_callback: null,
-        on_resize_time_cell_callback: null,
-        on_change_time_cell_callback: null
+        on_move_timecell_callback: null,
+        on_resize_timecell_callback: null,
+        on_change_timecell_callback: null,
+        on_dblclick_ruler_callback: null,
+        on_move_ruler_callback: null,
+        on_change_ruler_callback: null
     };
 
     TimeSlider.prototype.init = function(element, options) {
@@ -84,15 +86,15 @@ if (typeof jQuery === 'undefined') {
         }
         this.options = this.get_options(options);
 
-        this.px_per_ms = this.$element.width() / (this.options.hours_per_frame * 3600 * 1000);
+        this.px_per_ms = this.$element.width() / (this.options.hours_per_ruler * 3600 * 1000);
 
-        // append background color
+        // append background color and event layout
         this.$ruler.append('<div class="bg"></div><div class="bg-event"></div>');
 
         this.add_time_caret();
         this.add_graduations();
         if (this.options.init_cells) {
-            if (typeof this.options.init_cells === 'function') {
+            if (typeof this.options.init_cells == 'function') {
                 this.options.init_cells.bind(this).call();
             }
             else {
@@ -140,11 +142,11 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.validate_options = function (options) {
-        if (options['hours_per_frame'] < 1) {
-            options['hours_per_frame'] = 1;
+        if (options['hours_per_ruler'] < 1) {
+            options['hours_per_ruler'] = 1;
         }
-        else if (options['hours_per_frame'] > 48) {
-            options['hours_per_frame'] = 48;
+        else if (options['hours_per_ruler'] > 48) {
+            options['hours_per_ruler'] = 48;
         }
 
         if (options['update_timestamp_interval'] < 1) {
@@ -173,13 +175,13 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.set_options = function (options) {
-        if (options.hours_per_frame) {
+        if (options.hours_per_ruler) {
             options = $.extend({}, this.options, options);
 
-            // zoom
-            if (options.hours_per_frame != this.options.hours_per_frame) {
-                this.options.hours_per_frame = options.hours_per_frame;
-                this.px_per_ms = this.$ruler.width() / (this.options.hours_per_frame * 3600 * 1000);
+            // hours
+            if (options.hours_per_ruler != this.options.hours_per_ruler) {
+                this.options.hours_per_ruler = options.hours_per_ruler;
+                this.px_per_ms = this.$ruler.width() / (this.options.hours_per_ruler * 3600 * 1000);
                 this.remove_graduations();
                 this.add_graduations();
                 this.set_time_caret_position();
@@ -220,9 +222,9 @@ if (typeof jQuery === 'undefined') {
         $('body').mouseup(this.mouse_up_event());
         $('body').mousemove(this.cursor_moving_event());
         this.$ruler.find('.bg-event').mousedown(this.timeslider_mouse_down_event());
-        if (typeof this.options.on_dblclick_timeslider_callback == 'function') {
+        if (typeof this.options.on_dblclick_ruler_callback == 'function') {
             this.$ruler.find('.bg-event').dblclick(function () {
-                _this.options.on_dblclick_timeslider_callback(
+                _this.options.on_dblclick_ruler_callback(
                     _this.options.start_timestamp,
                     _this.options.current_timestamp
                 );
@@ -237,7 +239,7 @@ if (typeof jQuery === 'undefined') {
     };
 
     TimeSlider.prototype.add_graduations = function() {
-        var px_per_minute = this.$ruler.width() / (this.options.hours_per_frame * 60);
+        var px_per_minute = this.$ruler.width() / (this.options.hours_per_ruler * 60);
         var px_per_step = this.options.graduation_step;
         var min_step = px_per_step / px_per_minute;
         for (var i = 0; i < this.steps_by_minutes.length; i++) {
@@ -637,7 +639,7 @@ if (typeof jQuery === 'undefined') {
         return function() {
             // TODO: fix this
             _this.options.current_timestamp = _this.frozen_current_timestamp + (new Date() - _this.init_timestamp);
-            if (_this.options.current_timestamp - _this.options.start_timestamp >= (3600 * 1000 * _this.options.hours_per_frame)) {
+            if (_this.options.current_timestamp - _this.options.start_timestamp >= (3600 * 1000 * _this.options.hours_per_ruler)) {
                 // TODO: update time slider to next day if timeslider was not moved
             }
         }
@@ -689,7 +691,7 @@ if (typeof jQuery === 'undefined') {
 
         this.set_time_caret_position();
 
-        var px_per_minute = this.$ruler.width() / (this.options.hours_per_frame * 60);
+        var px_per_minute = this.$ruler.width() / (this.options.hours_per_ruler * 60);
         var px_per_step = this.options.graduation_step;
         var min_step = px_per_step / px_per_minute;
         for (var i = 0; i < this.steps_by_minutes.length; i++) {
@@ -741,8 +743,8 @@ if (typeof jQuery === 'undefined') {
             i++;
         });
         this.set_time_cells_position();
-        if (typeof this.options.on_move_timeslider_callback === 'function') {
-            this.options.on_move_timeslider_callback(this.options.start_timestamp);
+        if (typeof this.options.on_move_ruler_callback == 'function') {
+            this.options.on_move_ruler_callback(this.options.start_timestamp);
         }
     };
 
@@ -760,8 +762,8 @@ if (typeof jQuery === 'undefined') {
             this.time_cell_selected.t_element.css('left', parseFloat(this.time_cell_selected.t_element.css('left')) + diff_x);
             this.time_cell_selected.r_prompt.css('left', parseFloat(this.time_cell_selected.r_prompt.css('left')) + diff_x);
             this.set_tooltips(this.time_cell_selected);
-            if (typeof this.options.on_move_time_cell_callback === 'function') {
-                this.options.on_move_time_cell_callback(id, new_start, new_stop);
+            if (typeof this.options.on_move_timecell_callback == 'function') {
+                this.options.on_move_timecell_callback(id, new_start, new_stop);
             }
         }
         // resize left border
@@ -776,8 +778,8 @@ if (typeof jQuery === 'undefined') {
             this.time_cell_selected.t_element.css('width', width);
             this.set_time_duration(this.time_cell_selected.element);
             this.set_tooltips(this.time_cell_selected);
-            if (typeof this.options.on_resize_time_cell_callback === 'function') {
-                this.options.on_resize_time_cell_callback(
+            if (typeof this.options.on_resize_timecell_callback == 'function') {
+                this.options.on_resize_timecell_callback(
                     id,
                     parseInt(this.time_cell_selected.element.attr('start_timestamp')),
                     parseInt(this.time_cell_selected.element.attr('stop_timestamp')),
@@ -794,8 +796,8 @@ if (typeof jQuery === 'undefined') {
             this.time_cell_selected.r_prompt.css('left', parseFloat(this.time_cell_selected.r_prompt.css('left')) + diff_x);
             this.set_time_duration(this.time_cell_selected.element);
             this.set_tooltips(this.time_cell_selected);
-            if (typeof this.options.on_resize_time_cell_callback === 'function') {
-                this.options.on_resize_time_cell_callback(
+            if (typeof this.options.on_resize_timecell_callback == 'function') {
+                this.options.on_resize_timecell_callback(
                     id,
                     parseInt(this.time_cell_selected.element.attr('start_timestamp')),
                     parseInt(this.time_cell_selected.element.attr('stop_timestamp')),
@@ -848,8 +850,8 @@ if (typeof jQuery === 'undefined') {
                         _this.$prompts.find('#r-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
                         _this.time_cell_selected.t_element.removeClass('hover');
                     }
-                    if (typeof _this.options.on_change_time_cell_callback === 'function') {
-                        _this.options.on_change_time_cell_callback(
+                    if (typeof _this.options.on_change_timecell_callback == 'function') {
+                        _this.options.on_change_timecell_callback(
                             _this.time_cell_selected.element.attr('id'),
                             parseInt(_this.time_cell_selected.element.attr('start_timestamp')),
                             parseInt(_this.time_cell_selected.element.attr('stop_timestamp'))
@@ -859,8 +861,8 @@ if (typeof jQuery === 'undefined') {
                     _this.time_cell_selected = null;
                 }
                 else {
-                    if (typeof _this.options.on_change_timeslider_callback === 'function') {
-                        _this.options.on_change_timeslider_callback.bind(_this)(_this.options.start_timestamp);
+                    if (typeof _this.options.on_change_ruler_callback == 'function') {
+                        _this.options.on_change_ruler_callback.bind(_this)(_this.options.start_timestamp);
                     }
                 }
             }
@@ -918,6 +920,7 @@ if (typeof jQuery === 'undefined') {
     var old = $.fn.TimeSlider;
 
     $.fn.TimeSlider = Plugin;
+    $.fn.TimeSlider.VERSION = TimeSlider.VERSION;
 
     $.fn.TimeSlider.noConflict = function() {
         $.fn.TimeSlider = old;
