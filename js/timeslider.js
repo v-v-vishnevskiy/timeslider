@@ -52,7 +52,8 @@ if (typeof jQuery === 'undefined') {
         update_interval: 1000,                  // interval for updating elements
         show_ms: false,                         // whether to show the milliseconds?
         init_cells: null,                       // list of time cells or function
-        draggable: true,
+        ruler_draggable: true,
+        cell_draggable: true,
         on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
         on_remove_timecell_callback: null,
@@ -89,7 +90,7 @@ if (typeof jQuery === 'undefined') {
         this.px_per_ms = this.$element.width() / (this.options.hours_per_ruler * 3600 * 1000);
 
         // append background color and event layout
-        var draggableClass = !this.options.draggable ? ' draggable-off' : '';
+        var draggableClass = !this.options.ruler_draggable ? ' draggable-off' : '';
         this.$ruler.append(
             '<div class="bg"></div><div class="bg-event' + draggableClass + '"></div>'
         );
@@ -454,7 +455,7 @@ if (typeof jQuery === 'undefined') {
         };
 
         var time_cell_mousedown_event = function(e) {
-            if (e.which == 1) { // left mouse button event
+            if (e.which == 1 && _this.options.cell_draggable) { // left mouse button event
                 var id = $(this).attr('p_id');
                 switch(get_selected_area.call(this, e)) {
                     case 'left':
@@ -556,6 +557,7 @@ if (typeof jQuery === 'undefined') {
         };
 
         var t_class = '';
+        var t_class_draggable = _this.options.cell_draggable ? '' : ' draggable-off';
         var start;
         var stop = '';
         var style;
@@ -577,12 +579,12 @@ if (typeof jQuery === 'undefined') {
             style += 'width:' + width.toString() + 'px;';
             var timecell_style = this.set_style(timecell['style']);
             this.$ruler.append(
-                '<div id="'+ timecell['_id'] +'" class="timecell' + t_class + '" ' + start + ' ' + stop + ' style="' + style + timecell_style + '">' +
+                '<div id="'+ timecell['_id'] +'" class="timecell' + t_class  + '" ' + start + ' ' + stop + ' style="' + style + timecell_style + '">' +
                     this.time_duration(
                         (timecell['stop'] ? (timecell['stop']) : this.options.current_timestamp) - (timecell['start'])
                     ) +
                 '</div>' +
-                '<div id="t' + timecell['_id'] + '" p_id="' + timecell['_id'] + '" class="timecell-event' + t_class + '" style="' + style + '"></div>'
+                '<div id="t' + timecell['_id'] + '" p_id="' + timecell['_id'] + '" class="timecell-event' + t_class + t_class_draggable + '" style="' + style + '"></div>'
             );
             this.$prompts.append(
                 '<div id="l-prompt-' + timecell['_id'] + '" class="prompt" style="top:9px;left:' + (left - 44).toString() + 'px;">' +
@@ -896,7 +898,7 @@ if (typeof jQuery === 'undefined') {
     TimeSlider.prototype.timeslider_mouse_down_event = function() {
         var _this = this;
         return function(e) {
-            if (_this.options.draggable) {
+            if (_this.options.ruler_draggable) {
                 if (e.which == 1) { // left mouse button event
                     _this.is_mouse_down_left = true;
                     _this.prev_cursor_x = _this.get_cursor_x_position(e);
