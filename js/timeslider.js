@@ -537,7 +537,7 @@ if (typeof jQuery === 'undefined') {
                     case 'center':
                         if ($(this).hasClass('current')) {
                             $(this).css('cursor', 'default');
-                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
                             _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
                         }
                         else {
