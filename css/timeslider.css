@@ -42,7 +42,7 @@
 }
 
 .time-slider .ruler .bg-event.disable-move {
-    cursor: pointer;
+    cursor: default;
 }
 
 .time-slider .ruler .current-time-caret {
@@ -120,7 +120,7 @@
     height: 36px;
     background-color: transparent;
     position: absolute;
-    cursor: move;
+    cursor: default;
     z-index: 7;
     border-radius: 4px;
 }

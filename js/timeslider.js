@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.9.5
+ * Timeslider v0.9.6
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -29,6 +29,7 @@ if (typeof jQuery === 'undefined') {
         this.frozen_current_timestamp = 0;
         this.px_per_ms = 1;
         this.is_mouse_down_left = false;
+        this.clicked_on = null;
         this.prev_cursor_x = 0;
         this.time_cell_selected = null;
         this.running_time_cell = null;
@@ -40,7 +41,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.9.5';
+    TimeSlider.VERSION = '0.9.6';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1),   // left border
@@ -53,6 +54,8 @@ if (typeof jQuery === 'undefined') {
         show_ms: false,                         // whether to show the milliseconds?
         init_cells: null,                       // list of time cells or function
         ruler_enable_move: true,
+        timecell_enable_move: true,
+        timecell_enable_resize: true,
         on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
         on_remove_timecell_callback: null,
@@ -444,19 +447,37 @@ if (typeof jQuery === 'undefined') {
         var get_selected_area = function(e) {
             var width = parseFloat($(this).css('width'));
             var pos_x = parseFloat(e.offsetX);
-            if (pos_x <= 3) {
-                return 'left';
+            if (_this.options.timecell_enable_move && _this.options.timecell_enable_resize) {
+                if (pos_x <= 3) {
+                    return 'left';
+                }
+                else if (pos_x > 3 && pos_x < (width - 4)) {
+                    return 'center';
+                }
+                else {
+                    return 'right';
+                }
             }
-            else if (pos_x > 3 && pos_x < (width - 4)) {
+            else if (_this.options.timecell_enable_move) {
                 return 'center';
             }
-            else {
-                return 'right';
+            else if (_this.options.timecell_enable_resize) {
+                if (pos_x <= 3) {
+                    return 'left';
+                }
+                else if (pos_x > 3 && pos_x < (width - 4)) {
+                    return null;
+                }
+                else {
+                    return 'right';
+                }
             }
+            return null;
         };
 
         var time_cell_mousedown_event = function(e) {
             if (e.which == 1) { // left mouse button event
+                _this.clicked_on = 'timecell';
                 var id = $(this).attr('p_id');
                 switch(get_selected_area.call(this, e)) {
                     case 'left':
@@ -469,6 +490,7 @@ if (typeof jQuery === 'undefined') {
                         _this.is_mouse_down_left = true;
                         $(this).addClass('moving');
                         break;
+
                     case 'center':
                         if (! $(this).hasClass('current')) {
                             _this.time_cell_selected = {
@@ -482,6 +504,7 @@ if (typeof jQuery === 'undefined') {
                             $(this).addClass('moving');
                         }
                         break;
+
                     case 'right':
                         if (! $(this).hasClass('current')) {
                             _this.time_cell_selected = {
@@ -503,12 +526,14 @@ if (typeof jQuery === 'undefined') {
             if (! _this.is_mouse_down_left) {
                 var id = $(this).attr('p_id');
                 $(this).addClass('hover');
+                $(this).css('cursor', 'default');
                 switch(get_selected_area.call(this, e)) {
                     case 'left':
                         _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
                         _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
                         $(this).css('cursor', 'w-resize');
                         break;
+
                     case 'center':
                         if ($(this).hasClass('current')) {
                             $(this).css('cursor', 'default');
@@ -521,6 +546,7 @@ if (typeof jQuery === 'undefined') {
                             $(this).css('cursor', 'move');
                         }
                         break;
+
                     case 'right':
                         if ($(this).hasClass('current')) {
                             $(this).css('cursor', 'default');
@@ -533,6 +559,16 @@ if (typeof jQuery === 'undefined') {
                             $(this).css('cursor', 'e-resize');
                         }
                         break;
+
+                    default:
+                        if ($(this).hasClass('current')) {
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
+                            _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                        }
+                        else {
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
+                            _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeIn(150);
+                        }
                 }
             }
             else {
@@ -547,7 +583,6 @@ if (typeof jQuery === 'undefined') {
                 var id = $(this).attr('p_id');
                 _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeOut(150);
                 _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
-                $(this).css('cursor', 'move');
                 $(this).removeClass('hover');
             }
             else {
@@ -854,11 +889,16 @@ if (typeof jQuery === 'undefined') {
         return function(e) {
             var pos_x = _this.get_cursor_x_position(e);
             if (_this.is_mouse_down_left) {
-                if (_this.time_cell_selected) {
-                    _this.set_time_cell_position(e, pos_x - _this.prev_cursor_x);
-                }
-                else {
-                    _this.set_ruler_position(e, pos_x - _this.prev_cursor_x);
+                switch (_this.clicked_on) {
+                    case 'timecell':
+                        if (_this.time_cell_selected) {
+                            _this.set_time_cell_position(e, pos_x - _this.prev_cursor_x);
+                        }
+                        break;
+
+                    case 'ruler':
+                        _this.set_ruler_position(e, pos_x - _this.prev_cursor_x);
+                        break;
                 }
             }
             _this.prev_cursor_x = pos_x;
@@ -870,29 +910,35 @@ if (typeof jQuery === 'undefined') {
         return function(e) {
             if (e.which == 1) { // left mouse button event
                 _this.is_mouse_down_left = false;
-                if (_this.time_cell_selected) {
-                    if (! _this.time_cell_selected.hover) {
-                        _this.$prompts.find('#l-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
-                        _this.$prompts.find('#r-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
-                        _this.time_cell_selected.t_element.removeClass('hover');
-                    }
-                    if (typeof _this.options.on_change_timecell_callback == 'function') {
-                        _this.options.on_change_timecell_callback(
-                            _this.time_cell_selected.element.attr('id'),
-                            parseInt(_this.time_cell_selected.element.attr('start_timestamp')),
-                            parseInt(_this.time_cell_selected.element.attr('stop_timestamp'))
-                        );
-                    }
-                    _this.time_cell_selected.t_element.removeClass('moving');
-                    _this.time_cell_selected = null;
-                }
-                else { // ruler section
-                    if (_this.options.ruler_enable_move) {
-                        if (typeof _this.options.on_change_ruler_callback == 'function') {
-                            _this.options.on_change_ruler_callback.bind(_this)(_this.options.start_timestamp);
+                switch (_this.clicked_on) {
+                    case 'timecell':
+                        if (_this.time_cell_selected) {
+                            if (! _this.time_cell_selected.hover) {
+                                _this.$prompts.find('#l-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
+                                _this.$prompts.find('#r-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
+                                _this.time_cell_selected.t_element.removeClass('hover');
+                            }
+                            if (typeof _this.options.on_change_timecell_callback == 'function') {
+                                _this.options.on_change_timecell_callback(
+                                    _this.time_cell_selected.element.attr('id'),
+                                    parseInt(_this.time_cell_selected.element.attr('start_timestamp')),
+                                    parseInt(_this.time_cell_selected.element.attr('stop_timestamp'))
+                                );
+                            }
+                            _this.time_cell_selected.t_element.removeClass('moving');
+                            _this.time_cell_selected = null;
                         }
-                    }
+                        break;
+
+                    case 'ruler':
+                        if (_this.options.ruler_enable_move) {
+                            if (typeof _this.options.on_change_ruler_callback == 'function') {
+                                _this.options.on_change_ruler_callback.bind(_this)(_this.options.start_timestamp);
+                            }
+                        }
+                        break;
                 }
+                _this.clicked_on = null;
             }
         }
     };
@@ -901,6 +947,7 @@ if (typeof jQuery === 'undefined') {
         var _this = this;
         return function(e) {
             if (e.which == 1) { // left mouse button event
+                _this.clicked_on = 'ruler';
                 _this.is_mouse_down_left = true;
                 _this.prev_cursor_x = _this.get_cursor_x_position(e);
             }
