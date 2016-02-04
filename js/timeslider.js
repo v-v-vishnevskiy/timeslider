@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.9.4
+ * Timeslider v0.9.5
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -40,7 +40,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.9.4';
+    TimeSlider.VERSION = '0.9.5';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1),   // left border
@@ -52,6 +52,7 @@ if (typeof jQuery === 'undefined') {
         update_interval: 1000,                  // interval for updating elements
         show_ms: false,                         // whether to show the milliseconds?
         init_cells: null,                       // list of time cells or function
+        ruler_enable_move: true,
         on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
         on_remove_timecell_callback: null,
@@ -89,7 +90,10 @@ if (typeof jQuery === 'undefined') {
         this.px_per_ms = this.$element.width() / (this.options.hours_per_ruler * 3600 * 1000);
 
         // append background color and event layout
-        this.$ruler.append('<div class="bg"></div><div class="bg-event"></div>');
+        this.$ruler.append(
+            '<div class="bg"></div>' +
+            '<div class="bg-event' + (this.options.ruler_enable_move ? '' : 'disable-move') + '"></div>'
+        );
 
         this.add_time_caret();
         this.add_graduations();
@@ -239,7 +243,9 @@ if (typeof jQuery === 'undefined') {
         window.setInterval(this.set_running_elements(), this.options['update_interval']);
         $('body').mouseup(this.mouse_up_event());
         $('body').mousemove(this.cursor_moving_event());
-        this.$ruler.find('.bg-event').mousedown(this.timeslider_mouse_down_event());
+        if (this.options.ruler_enable_move) {
+            this.$ruler.find('.bg-event').mousedown(this.ruler_mouse_down_event());
+        }
         if (typeof this.options.on_dblclick_ruler_callback == 'function') {
             this.$ruler.find('.bg-event').dblclick(function () {
                 _this.options.on_dblclick_ruler_callback(
@@ -705,7 +711,7 @@ if (typeof jQuery === 'undefined') {
         });
     };
 
-    TimeSlider.prototype.set_timeslider_position = function(e, diff_x) {
+    TimeSlider.prototype.set_ruler_position = function(e, diff_x) {
         var _this = this;
         this.options.start_timestamp = this.options.start_timestamp - Math.round(diff_x / this.px_per_ms);
 
@@ -852,7 +858,7 @@ if (typeof jQuery === 'undefined') {
                     _this.set_time_cell_position(e, pos_x - _this.prev_cursor_x);
                 }
                 else {
-                    _this.set_timeslider_position(e, pos_x - _this.prev_cursor_x);
+                    _this.set_ruler_position(e, pos_x - _this.prev_cursor_x);
                 }
             }
             _this.prev_cursor_x = pos_x;
@@ -880,16 +886,18 @@ if (typeof jQuery === 'undefined') {
                     _this.time_cell_selected.t_element.removeClass('moving');
                     _this.time_cell_selected = null;
                 }
-                else {
-                    if (typeof _this.options.on_change_ruler_callback == 'function') {
-                        _this.options.on_change_ruler_callback.bind(_this)(_this.options.start_timestamp);
+                else { // ruler section
+                    if (_this.options.ruler_enable_move) {
+                        if (typeof _this.options.on_change_ruler_callback == 'function') {
+                            _this.options.on_change_ruler_callback.bind(_this)(_this.options.start_timestamp);
+                        }
                     }
                 }
             }
         }
     };
 
-    TimeSlider.prototype.timeslider_mouse_down_event = function() {
+    TimeSlider.prototype.ruler_mouse_down_event = function() {
         var _this = this;
         return function(e) {
             if (e.which == 1) { // left mouse button event
