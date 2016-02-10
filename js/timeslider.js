@@ -746,7 +746,11 @@ if (typeof jQuery === 'undefined') {
         });
     };
 
-    TimeSlider.prototype.set_ruler_position = function(e, diff_x) {
+    TimeSlider.prototype.set_new_start_timestamp = function(timestamp) {
+        this.set_ruler_position((this.options.start_timestamp - timestamp) * this.px_per_ms);
+    };
+
+    TimeSlider.prototype.set_ruler_position = function(diff_x) {
         var _this = this;
         this.options.start_timestamp = this.options.start_timestamp - Math.round(diff_x / this.px_per_ms);
 
@@ -809,7 +813,7 @@ if (typeof jQuery === 'undefined') {
         }
     };
 
-    TimeSlider.prototype.set_time_cell_position = function(e, diff_x) {
+    TimeSlider.prototype.set_time_cell_position = function(diff_x) {
         var id = this.time_cell_selected.element.attr('id');
 
         // move all time cell
@@ -892,12 +896,12 @@ if (typeof jQuery === 'undefined') {
                 switch (_this.clicked_on) {
                     case 'timecell':
                         if (_this.time_cell_selected) {
-                            _this.set_time_cell_position(e, pos_x - _this.prev_cursor_x);
+                            _this.set_time_cell_position(pos_x - _this.prev_cursor_x);
                         }
                         break;
 
                     case 'ruler':
-                        _this.set_ruler_position(e, pos_x - _this.prev_cursor_x);
+                        _this.set_ruler_position(pos_x - _this.prev_cursor_x);
                         break;
                 }
             }
@@ -982,6 +986,10 @@ if (typeof jQuery === 'undefined') {
 
                         case 'remove_all':
                             data.remove_all_timecells();
+                            break;
+
+                        case 'new_start_timestamp':
+                            data.set_new_start_timestamp(timecell);
                             break;
                     }
                 }
