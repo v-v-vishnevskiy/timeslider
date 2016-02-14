@@ -8,7 +8,7 @@
 ## Особенности
 
 * Неограниченное кол-во отрезков времени
-* Drug and drop
+* Drag and drop
 
 ## Демо
 [Демо](http://v-v-vishnevskiy.github.io/timeslider/demo/demo.html) страница.

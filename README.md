@@ -8,7 +8,7 @@ Lightweight and usable plugin for timeline management.
 ## Features
 
 * Any number of time cells at one page.
-* Drug and drop
+* Drag and drop
 
 ## Demo
 [Demo](http://v-v-vishnevskiy.github.io/timeslider/demo/demo.html) page.
