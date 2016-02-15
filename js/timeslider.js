@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.9.7
+ * Timeslider v0.9.8
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -41,7 +41,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.9.7';
+    TimeSlider.VERSION = '0.9.8';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1),   // left border
@@ -374,6 +374,19 @@ if (typeof jQuery === 'undefined') {
         }
         if (typeof this.options.on_add_timecell_callback == 'function') {
             this.options.on_add_timecell_callback(timecell_id, start, stop);
+        }
+    };
+
+    TimeSlider.prototype.edit_timecell = function(options) {
+        if (! options['_id'] || (! options['start'] && ! options['stop'])) {
+            return;
+        }
+        options['element'] = this.$ruler.find('#' + options['_id']);
+        if (options['element'].length) {
+            options['l_prompt'] = this.$prompts.find('#l-prompt-' + options['_id'] + '.prompt');
+            options['t_element'] = this.$ruler.find('#t' + options['_id']);
+            options['r_prompt'] = this.$prompts.find('#r-prompt-' + options['_id'] + '.prompt');
+            this._edit_time_cell(options);
         }
     };
 
@@ -813,20 +826,55 @@ if (typeof jQuery === 'undefined') {
         }
     };
 
+    TimeSlider.prototype._edit_time_cell = function(options) {
+        var has_start = options.start !== undefined && options.start !== null;
+        var has_stop = options.stop !== undefined && options.stop !== null && options.element.attr('stop_timestamp');
+        if (has_start) {
+            var stop = null;
+            if (options.stop !== undefined && options.stop) {
+                stop = options.stop;
+            }
+            else if (options.element.attr('stop_timestamp')) {
+                stop = parseInt(options.element.attr('stop_timestamp'));
+            }
+            var left = (options.start - this.options.start_timestamp) * this.px_per_ms;
+            var width = ((stop !== null ? stop : this.options.current_timestamp) - options.start) * this.px_per_ms;
+            options.element.attr('start_timestamp', options.start);
+            options.element.css('left', left);
+            options.element.css('width', width);
+            options.t_element.css('left', left);
+            options.t_element.css('width', width);
+            options.l_prompt.css('left', left - 44);
+        }
+        if (has_stop) {
+            var start = has_start ? options.start : parseInt(options.element.attr('start_timestamp'));
+            var left = (start - this.options.start_timestamp) * this.px_per_ms;
+            var width = (options.stop - start) * this.px_per_ms;
+            options.element.attr('stop_timestamp', options.stop);
+            options.element.css('width', width);
+            options.t_element.css('width', width);
+            options.r_prompt.css('left', left + width - 44);
+        }
+        this.set_time_duration(options.element);
+        this.set_tooltips(options);
+    };
+
     TimeSlider.prototype.set_time_cell_position = function(diff_x) {
         var id = this.time_cell_selected.element.attr('id');
+        var timecell = {
+            element: this.time_cell_selected.element,
+            t_element: this.time_cell_selected.t_element
+        };
 
         // move all time cell
         if (this.time_cell_selected.l_prompt && this.time_cell_selected.r_prompt) {
             var new_start = parseInt(this.time_cell_selected.element.attr('start_timestamp')) + Math.round(diff_x / this.px_per_ms);
             var new_stop = parseInt(this.time_cell_selected.element.attr('stop_timestamp')) + Math.round(diff_x / this.px_per_ms);
-            this.time_cell_selected.element.attr('start_timestamp', new_start);
-            this.time_cell_selected.element.attr('stop_timestamp', new_stop);
-            this.time_cell_selected.element.css('left', parseFloat(this.time_cell_selected.element.css('left')) + diff_x);
-            this.time_cell_selected.l_prompt.css('left', parseFloat(this.time_cell_selected.l_prompt.css('left')) + diff_x);
-            this.time_cell_selected.t_element.css('left', parseFloat(this.time_cell_selected.t_element.css('left')) + diff_x);
-            this.time_cell_selected.r_prompt.css('left', parseFloat(this.time_cell_selected.r_prompt.css('left')) + diff_x);
-            this.set_tooltips(this.time_cell_selected);
+            timecell['l_prompt'] = this.time_cell_selected.l_prompt;
+            timecell['r_prompt'] = this.time_cell_selected.r_prompt;
+            timecell['start'] = new_start;
+            timecell['stop'] = new_stop;
+            this._edit_time_cell(timecell);
             if (typeof this.options.on_move_timecell_callback == 'function') {
                 this.options.on_move_timecell_callback(id, new_start, new_stop);
             }
@@ -834,15 +882,9 @@ if (typeof jQuery === 'undefined') {
         // resize left border
         else if (this.time_cell_selected.l_prompt) {
             var new_start = parseInt(this.time_cell_selected.element.attr('start_timestamp')) + Math.round(diff_x / this.px_per_ms);
-            var width = parseFloat(this.time_cell_selected.element.css('width')) + diff_x * (-1);
-            this.time_cell_selected.element.attr('start_timestamp', new_start);
-            this.time_cell_selected.element.css('left', parseFloat(this.time_cell_selected.element.css('left')) + diff_x);
-            this.time_cell_selected.element.css('width', width);
-            this.time_cell_selected.l_prompt.css('left', parseFloat(this.time_cell_selected.l_prompt.css('left')) + diff_x);
-            this.time_cell_selected.t_element.css('left', parseFloat(this.time_cell_selected.t_element.css('left')) + diff_x);
-            this.time_cell_selected.t_element.css('width', width);
-            this.set_time_duration(this.time_cell_selected.element);
-            this.set_tooltips(this.time_cell_selected);
+            timecell['l_prompt'] = this.time_cell_selected.l_prompt;
+            timecell['start'] = new_start;
+            this._edit_time_cell(timecell);
             if (typeof this.options.on_resize_timecell_callback == 'function') {
                 this.options.on_resize_timecell_callback(
                     id,
@@ -855,12 +897,9 @@ if (typeof jQuery === 'undefined') {
         // resize right border
         else if (this.time_cell_selected.r_prompt) {
             var new_stop = parseInt(this.time_cell_selected.element.attr('stop_timestamp')) + Math.round(diff_x / this.px_per_ms);
-            this.time_cell_selected.element.attr('stop_timestamp', new_stop);
-            this.time_cell_selected.element.css('width', parseFloat(this.time_cell_selected.element.css('width')) + diff_x);
-            this.time_cell_selected.t_element.css('width', parseFloat(this.time_cell_selected.t_element.css('width')) + diff_x);
-            this.time_cell_selected.r_prompt.css('left', parseFloat(this.time_cell_selected.r_prompt.css('left')) + diff_x);
-            this.set_time_duration(this.time_cell_selected.element);
-            this.set_tooltips(this.time_cell_selected);
+            timecell['r_prompt'] = this.time_cell_selected.r_prompt;
+            timecell['stop'] = new_stop;
+            this._edit_time_cell(timecell);
             if (typeof this.options.on_resize_timecell_callback == 'function') {
                 this.options.on_resize_timecell_callback(
                     id,
@@ -978,6 +1017,10 @@ if (typeof jQuery === 'undefined') {
 
                         case 'toggle':
                             data.toggle_timecell(timecell);
+                            break;
+
+                        case 'edit':
+                            data.edit_timecell(timecell);
                             break;
 
                         case 'remove':
