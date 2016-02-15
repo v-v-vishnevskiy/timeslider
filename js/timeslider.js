@@ -1,5 +1,5 @@
 /*!
- * Timeslider v0.9.4
+ * Timeslider v0.9.8
  * Copyright 2016 Valery Vishnevskiy
  * https://github.com/v-v-vishnevskiy/timeslider
  * https://github.com/v-v-vishnevskiy/timeslider/blob/master/LICENSE
@@ -29,6 +29,7 @@ if (typeof jQuery === 'undefined') {
         this.frozen_current_timestamp = 0;
         this.px_per_ms = 1;
         this.is_mouse_down_left = false;
+        this.clicked_on = null;
         this.prev_cursor_x = 0;
         this.time_cell_selected = null;
         this.running_time_cell = null;
@@ -40,7 +41,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    TimeSlider.VERSION = '0.9.4';
+    TimeSlider.VERSION = '0.9.8';
 
     TimeSlider.DEFAULTS = {
         start_timestamp: (new Date()).getTime() + ((new Date()).getTimezoneOffset() * 60 * 1000 * -1),   // left border
@@ -52,6 +53,9 @@ if (typeof jQuery === 'undefined') {
         update_interval: 1000,                  // interval for updating elements
         show_ms: false,                         // whether to show the milliseconds?
         init_cells: null,                       // list of time cells or function
+        ruler_enable_move: true,
+        timecell_enable_move: true,
+        timecell_enable_resize: true,
         on_add_timecell_callback: null,
         on_toggle_timecell_callback: null,
         on_remove_timecell_callback: null,
@@ -89,7 +93,10 @@ if (typeof jQuery === 'undefined') {
         this.px_per_ms = this.$element.width() / (this.options.hours_per_ruler * 3600 * 1000);
 
         // append background color and event layout
-        this.$ruler.append('<div class="bg"></div><div class="bg-event"></div>');
+        this.$ruler.append(
+            '<div class="bg"></div>' +
+            '<div class="bg-event' + (this.options.ruler_enable_move ? '' : 'disable-move') + '"></div>'
+        );
 
         this.add_time_caret();
         this.add_graduations();
@@ -239,7 +246,9 @@ if (typeof jQuery === 'undefined') {
         window.setInterval(this.set_running_elements(), this.options['update_interval']);
         $('body').mouseup(this.mouse_up_event());
         $('body').mousemove(this.cursor_moving_event());
-        this.$ruler.find('.bg-event').mousedown(this.timeslider_mouse_down_event());
+        if (this.options.ruler_enable_move) {
+            this.$ruler.find('.bg-event').mousedown(this.ruler_mouse_down_event());
+        }
         if (typeof this.options.on_dblclick_ruler_callback == 'function') {
             this.$ruler.find('.bg-event').dblclick(function () {
                 _this.options.on_dblclick_ruler_callback(
@@ -368,6 +377,19 @@ if (typeof jQuery === 'undefined') {
         }
     };
 
+    TimeSlider.prototype.edit_timecell = function(options) {
+        if (! options['_id'] || (! options['start'] && ! options['stop'])) {
+            return;
+        }
+        options['element'] = this.$ruler.find('#' + options['_id']);
+        if (options['element'].length) {
+            options['l_prompt'] = this.$prompts.find('#l-prompt-' + options['_id'] + '.prompt');
+            options['t_element'] = this.$ruler.find('#t' + options['_id']);
+            options['r_prompt'] = this.$prompts.find('#r-prompt-' + options['_id'] + '.prompt');
+            this._edit_time_cell(options);
+        }
+    };
+
     TimeSlider.prototype.remove_timecell = function(timecell_id) {
         var timecell = this.$ruler.find('#' + timecell_id);
         var start = null;
@@ -438,19 +460,37 @@ if (typeof jQuery === 'undefined') {
         var get_selected_area = function(e) {
             var width = parseFloat($(this).css('width'));
             var pos_x = parseFloat(e.offsetX);
-            if (pos_x <= 3) {
-                return 'left';
+            if (_this.options.timecell_enable_move && _this.options.timecell_enable_resize) {
+                if (pos_x <= 3) {
+                    return 'left';
+                }
+                else if (pos_x > 3 && pos_x < (width - 4)) {
+                    return 'center';
+                }
+                else {
+                    return 'right';
+                }
             }
-            else if (pos_x > 3 && pos_x < (width - 4)) {
+            else if (_this.options.timecell_enable_move) {
                 return 'center';
             }
-            else {
-                return 'right';
+            else if (_this.options.timecell_enable_resize) {
+                if (pos_x <= 3) {
+                    return 'left';
+                }
+                else if (pos_x > 3 && pos_x < (width - 4)) {
+                    return null;
+                }
+                else {
+                    return 'right';
+                }
             }
+            return null;
         };
 
         var time_cell_mousedown_event = function(e) {
             if (e.which == 1) { // left mouse button event
+                _this.clicked_on = 'timecell';
                 var id = $(this).attr('p_id');
                 switch(get_selected_area.call(this, e)) {
                     case 'left':
@@ -463,6 +503,7 @@ if (typeof jQuery === 'undefined') {
                         _this.is_mouse_down_left = true;
                         $(this).addClass('moving');
                         break;
+
                     case 'center':
                         if (! $(this).hasClass('current')) {
                             _this.time_cell_selected = {
@@ -476,6 +517,7 @@ if (typeof jQuery === 'undefined') {
                             $(this).addClass('moving');
                         }
                         break;
+
                     case 'right':
                         if (! $(this).hasClass('current')) {
                             _this.time_cell_selected = {
@@ -497,16 +539,18 @@ if (typeof jQuery === 'undefined') {
             if (! _this.is_mouse_down_left) {
                 var id = $(this).attr('p_id');
                 $(this).addClass('hover');
+                $(this).css('cursor', 'default');
                 switch(get_selected_area.call(this, e)) {
                     case 'left':
                         _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
                         _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
                         $(this).css('cursor', 'w-resize');
                         break;
+
                     case 'center':
                         if ($(this).hasClass('current')) {
                             $(this).css('cursor', 'default');
-                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeOut(150);
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
                             _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
                         }
                         else {
@@ -515,6 +559,7 @@ if (typeof jQuery === 'undefined') {
                             $(this).css('cursor', 'move');
                         }
                         break;
+
                     case 'right':
                         if ($(this).hasClass('current')) {
                             $(this).css('cursor', 'default');
@@ -527,6 +572,16 @@ if (typeof jQuery === 'undefined') {
                             $(this).css('cursor', 'e-resize');
                         }
                         break;
+
+                    default:
+                        if ($(this).hasClass('current')) {
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
+                            _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
+                        }
+                        else {
+                            _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeIn(150);
+                            _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeIn(150);
+                        }
                 }
             }
             else {
@@ -541,7 +596,6 @@ if (typeof jQuery === 'undefined') {
                 var id = $(this).attr('p_id');
                 _this.$prompts.find('#l-prompt-' + id + '.prompt').fadeOut(150);
                 _this.$prompts.find('#r-prompt-' + id + '.prompt').fadeOut(150);
-                $(this).css('cursor', 'move');
                 $(this).removeClass('hover');
             }
             else {
@@ -705,7 +759,11 @@ if (typeof jQuery === 'undefined') {
         });
     };
 
-    TimeSlider.prototype.set_timeslider_position = function(e, diff_x) {
+    TimeSlider.prototype.set_new_start_timestamp = function(timestamp) {
+        this.set_ruler_position((this.options.start_timestamp - timestamp) * this.px_per_ms);
+    };
+
+    TimeSlider.prototype.set_ruler_position = function(diff_x) {
         var _this = this;
         this.options.start_timestamp = this.options.start_timestamp - Math.round(diff_x / this.px_per_ms);
 
@@ -768,20 +826,55 @@ if (typeof jQuery === 'undefined') {
         }
     };
 
-    TimeSlider.prototype.set_time_cell_position = function(e, diff_x) {
+    TimeSlider.prototype._edit_time_cell = function(options) {
+        var has_start = options.start !== undefined && options.start !== null;
+        var has_stop = options.stop !== undefined && options.stop !== null && options.element.attr('stop_timestamp');
+        if (has_start) {
+            var stop = null;
+            if (options.stop !== undefined && options.stop) {
+                stop = options.stop;
+            }
+            else if (options.element.attr('stop_timestamp')) {
+                stop = parseInt(options.element.attr('stop_timestamp'));
+            }
+            var left = (options.start - this.options.start_timestamp) * this.px_per_ms;
+            var width = ((stop !== null ? stop : this.options.current_timestamp) - options.start) * this.px_per_ms;
+            options.element.attr('start_timestamp', options.start);
+            options.element.css('left', left);
+            options.element.css('width', width);
+            options.t_element.css('left', left);
+            options.t_element.css('width', width);
+            options.l_prompt.css('left', left - 44);
+        }
+        if (has_stop) {
+            var start = has_start ? options.start : parseInt(options.element.attr('start_timestamp'));
+            var left = (start - this.options.start_timestamp) * this.px_per_ms;
+            var width = (options.stop - start) * this.px_per_ms;
+            options.element.attr('stop_timestamp', options.stop);
+            options.element.css('width', width);
+            options.t_element.css('width', width);
+            options.r_prompt.css('left', left + width - 44);
+        }
+        this.set_time_duration(options.element);
+        this.set_tooltips(options);
+    };
+
+    TimeSlider.prototype.set_time_cell_position = function(diff_x) {
         var id = this.time_cell_selected.element.attr('id');
+        var timecell = {
+            element: this.time_cell_selected.element,
+            t_element: this.time_cell_selected.t_element
+        };
 
         // move all time cell
         if (this.time_cell_selected.l_prompt && this.time_cell_selected.r_prompt) {
             var new_start = parseInt(this.time_cell_selected.element.attr('start_timestamp')) + Math.round(diff_x / this.px_per_ms);
             var new_stop = parseInt(this.time_cell_selected.element.attr('stop_timestamp')) + Math.round(diff_x / this.px_per_ms);
-            this.time_cell_selected.element.attr('start_timestamp', new_start);
-            this.time_cell_selected.element.attr('stop_timestamp', new_stop);
-            this.time_cell_selected.element.css('left', parseFloat(this.time_cell_selected.element.css('left')) + diff_x);
-            this.time_cell_selected.l_prompt.css('left', parseFloat(this.time_cell_selected.l_prompt.css('left')) + diff_x);
-            this.time_cell_selected.t_element.css('left', parseFloat(this.time_cell_selected.t_element.css('left')) + diff_x);
-            this.time_cell_selected.r_prompt.css('left', parseFloat(this.time_cell_selected.r_prompt.css('left')) + diff_x);
-            this.set_tooltips(this.time_cell_selected);
+            timecell['l_prompt'] = this.time_cell_selected.l_prompt;
+            timecell['r_prompt'] = this.time_cell_selected.r_prompt;
+            timecell['start'] = new_start;
+            timecell['stop'] = new_stop;
+            this._edit_time_cell(timecell);
             if (typeof this.options.on_move_timecell_callback == 'function') {
                 this.options.on_move_timecell_callback(id, new_start, new_stop);
             }
@@ -789,15 +882,9 @@ if (typeof jQuery === 'undefined') {
         // resize left border
         else if (this.time_cell_selected.l_prompt) {
             var new_start = parseInt(this.time_cell_selected.element.attr('start_timestamp')) + Math.round(diff_x / this.px_per_ms);
-            var width = parseFloat(this.time_cell_selected.element.css('width')) + diff_x * (-1);
-            this.time_cell_selected.element.attr('start_timestamp', new_start);
-            this.time_cell_selected.element.css('left', parseFloat(this.time_cell_selected.element.css('left')) + diff_x);
-            this.time_cell_selected.element.css('width', width);
-            this.time_cell_selected.l_prompt.css('left', parseFloat(this.time_cell_selected.l_prompt.css('left')) + diff_x);
-            this.time_cell_selected.t_element.css('left', parseFloat(this.time_cell_selected.t_element.css('left')) + diff_x);
-            this.time_cell_selected.t_element.css('width', width);
-            this.set_time_duration(this.time_cell_selected.element);
-            this.set_tooltips(this.time_cell_selected);
+            timecell['l_prompt'] = this.time_cell_selected.l_prompt;
+            timecell['start'] = new_start;
+            this._edit_time_cell(timecell);
             if (typeof this.options.on_resize_timecell_callback == 'function') {
                 this.options.on_resize_timecell_callback(
                     id,
@@ -810,12 +897,9 @@ if (typeof jQuery === 'undefined') {
         // resize right border
         else if (this.time_cell_selected.r_prompt) {
             var new_stop = parseInt(this.time_cell_selected.element.attr('stop_timestamp')) + Math.round(diff_x / this.px_per_ms);
-            this.time_cell_selected.element.attr('stop_timestamp', new_stop);
-            this.time_cell_selected.element.css('width', parseFloat(this.time_cell_selected.element.css('width')) + diff_x);
-            this.time_cell_selected.t_element.css('width', parseFloat(this.time_cell_selected.t_element.css('width')) + diff_x);
-            this.time_cell_selected.r_prompt.css('left', parseFloat(this.time_cell_selected.r_prompt.css('left')) + diff_x);
-            this.set_time_duration(this.time_cell_selected.element);
-            this.set_tooltips(this.time_cell_selected);
+            timecell['r_prompt'] = this.time_cell_selected.r_prompt;
+            timecell['stop'] = new_stop;
+            this._edit_time_cell(timecell);
             if (typeof this.options.on_resize_timecell_callback == 'function') {
                 this.options.on_resize_timecell_callback(
                     id,
@@ -848,11 +932,16 @@ if (typeof jQuery === 'undefined') {
         return function(e) {
             var pos_x = _this.get_cursor_x_position(e);
             if (_this.is_mouse_down_left) {
-                if (_this.time_cell_selected) {
-                    _this.set_time_cell_position(e, pos_x - _this.prev_cursor_x);
-                }
-                else {
-                    _this.set_timeslider_position(e, pos_x - _this.prev_cursor_x);
+                switch (_this.clicked_on) {
+                    case 'timecell':
+                        if (_this.time_cell_selected) {
+                            _this.set_time_cell_position(pos_x - _this.prev_cursor_x);
+                        }
+                        break;
+
+                    case 'ruler':
+                        _this.set_ruler_position(pos_x - _this.prev_cursor_x);
+                        break;
                 }
             }
             _this.prev_cursor_x = pos_x;
@@ -864,35 +953,44 @@ if (typeof jQuery === 'undefined') {
         return function(e) {
             if (e.which == 1) { // left mouse button event
                 _this.is_mouse_down_left = false;
-                if (_this.time_cell_selected) {
-                    if (! _this.time_cell_selected.hover) {
-                        _this.$prompts.find('#l-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
-                        _this.$prompts.find('#r-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
-                        _this.time_cell_selected.t_element.removeClass('hover');
-                    }
-                    if (typeof _this.options.on_change_timecell_callback == 'function') {
-                        _this.options.on_change_timecell_callback(
-                            _this.time_cell_selected.element.attr('id'),
-                            parseInt(_this.time_cell_selected.element.attr('start_timestamp')),
-                            parseInt(_this.time_cell_selected.element.attr('stop_timestamp'))
-                        );
-                    }
-                    _this.time_cell_selected.t_element.removeClass('moving');
-                    _this.time_cell_selected = null;
+                switch (_this.clicked_on) {
+                    case 'timecell':
+                        if (_this.time_cell_selected) {
+                            if (! _this.time_cell_selected.hover) {
+                                _this.$prompts.find('#l-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
+                                _this.$prompts.find('#r-prompt-' + _this.time_cell_selected.element.attr('id') + '.prompt').fadeOut(150);
+                                _this.time_cell_selected.t_element.removeClass('hover');
+                            }
+                            if (typeof _this.options.on_change_timecell_callback == 'function') {
+                                _this.options.on_change_timecell_callback(
+                                    _this.time_cell_selected.element.attr('id'),
+                                    parseInt(_this.time_cell_selected.element.attr('start_timestamp')),
+                                    parseInt(_this.time_cell_selected.element.attr('stop_timestamp'))
+                                );
+                            }
+                            _this.time_cell_selected.t_element.removeClass('moving');
+                            _this.time_cell_selected = null;
+                        }
+                        break;
+
+                    case 'ruler':
+                        if (_this.options.ruler_enable_move) {
+                            if (typeof _this.options.on_change_ruler_callback == 'function') {
+                                _this.options.on_change_ruler_callback.bind(_this)(_this.options.start_timestamp);
+                            }
+                        }
+                        break;
                 }
-                else {
-                    if (typeof _this.options.on_change_ruler_callback == 'function') {
-                        _this.options.on_change_ruler_callback.bind(_this)(_this.options.start_timestamp);
-                    }
-                }
+                _this.clicked_on = null;
             }
         }
     };
 
-    TimeSlider.prototype.timeslider_mouse_down_event = function() {
+    TimeSlider.prototype.ruler_mouse_down_event = function() {
         var _this = this;
         return function(e) {
             if (e.which == 1) { // left mouse button event
+                _this.clicked_on = 'ruler';
                 _this.is_mouse_down_left = true;
                 _this.prev_cursor_x = _this.get_cursor_x_position(e);
             }
@@ -921,12 +1019,20 @@ if (typeof jQuery === 'undefined') {
                             data.toggle_timecell(timecell);
                             break;
 
+                        case 'edit':
+                            data.edit_timecell(timecell);
+                            break;
+
                         case 'remove':
                             data.remove_timecell(timecell);
                             break;
 
                         case 'remove_all':
                             data.remove_all_timecells();
+                            break;
+
+                        case 'new_start_timestamp':
+                            data.set_new_start_timestamp(timecell);
                             break;
                     }
                 }
