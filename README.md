@@ -33,7 +33,7 @@ Lightweight and usable plugin for timeline management.
 <div id="ts" class="time-slider"></div>
 ```
 4\. Initialize the plugin and we're ready to go.
-```html
+```js
 $('#ts').TimeSlider();
 ```
 

@@ -33,7 +33,7 @@
 <div id="ts" class="time-slider"></div>
 ```
 4\. Инициализируйте плагин для созданного div
-```html
+```js
 $('#ts').TimeSlider();
 ```
 
