@@ -713,6 +713,7 @@ if (typeof jQuery === 'undefined') {
         return function() {
             // TODO: fix this
             _this.options.current_timestamp = _this.frozen_current_timestamp + (new Date() - _this.init_timestamp);
+            _this.set_ruler_position( - _this.options.update_timestamp_interval * _this.px_per_ms);
             if (_this.options.current_timestamp - _this.options.start_timestamp >= (3600 * 1000 * _this.options.hours_per_ruler)) {
                 // TODO: update time slider to next day if timeslider was not moved
             }
